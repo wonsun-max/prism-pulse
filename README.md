@@ -62,8 +62,8 @@ Create a `.env` file in the root directory:
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_ADMOB_APP_ID=ca-app-pub-4817475918283790~8916632999
-VITE_ADMOB_BANNER_ID=ca-app-pub-4817475918283790/1695882439
+VITE_ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXX~XXXXXXXXXX
+VITE_ADMOB_BANNER_ID=ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXXX
 ```
 
 ### **3. Mobile Build (Android Studio)**
