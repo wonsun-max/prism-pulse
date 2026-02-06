@@ -184,8 +184,11 @@ export class UIScene extends Scene {
     gameScene.events.off(EVENTS.LINES_CLEARED);
     gameScene.events.off(EVENTS.GAME_OVER);
 
-    gameScene.events.on(EVENTS.SCORE_GAINED, (data: { amount: number, x: number, y: number }) => {
+    gameScene.events.on(EVENTS.SCORE_GAINED, (data: { amount: number, x: number, y: number, isPerfect?: boolean }) => {
         this.animateScoreGained(data.amount, data.x, data.y);
+        if (data.isPerfect) {
+            this.showSpecialMessage('PERFECT CLEAR!');
+        }
     });
 
     gameScene.events.on(EVENTS.TIMER_UPDATED, (seconds: number) => {
@@ -320,25 +323,32 @@ export class UIScene extends Scene {
 
   private showCombo(lines: number) {
     if (lines < 2) return;
-    const comboDiv = document.createElement('div');
-    comboDiv.innerText = `COMBO x${lines}!`;
-    comboDiv.className = 'combo-effect';
-    document.getElementById('ui-layer')?.appendChild(comboDiv);
-    comboDiv.style.position = 'absolute';
-    comboDiv.style.top = '40%';
-    comboDiv.style.left = '50%';
-    comboDiv.style.transform = 'translate(-50%, -50%)';
-    comboDiv.style.color = '#00f3ff';
-    comboDiv.style.fontSize = '48px';
-    comboDiv.style.fontWeight = '900';
-    comboDiv.style.textShadow = '0 0 20px #00f3ff';
-    comboDiv.style.pointerEvents = 'none';
-    comboDiv.style.zIndex = '2000';
+    this.showSpecialMessage(`COMBO x${lines}!`);
+  }
+
+  private showSpecialMessage(text: string) {
+    const msgDiv = document.createElement('div');
+    msgDiv.innerText = text;
+    msgDiv.className = 'combo-effect';
+    document.getElementById('ui-layer')?.appendChild(msgDiv);
+    msgDiv.style.position = 'absolute';
+    msgDiv.style.top = '40%';
+    msgDiv.style.left = '50%';
+    msgDiv.style.transform = 'translate(-50%, -50%)';
+    msgDiv.style.color = '#00f3ff';
+    msgDiv.style.fontSize = '48px';
+    msgDiv.style.fontWeight = '900';
+    msgDiv.style.textShadow = '0 0 20px #00f3ff';
+    msgDiv.style.pointerEvents = 'none';
+    msgDiv.style.zIndex = '2000';
+    msgDiv.style.width = '100%';
+    msgDiv.style.textAlign = 'center';
+    
     requestAnimationFrame(() => {
-        comboDiv.style.transition = 'all 0.8s ease-out';
-        comboDiv.style.transform = 'translate(-50%, -80%) scale(1.5)';
-        comboDiv.style.opacity = '0';
-        setTimeout(() => comboDiv.remove(), 800);
+        msgDiv.style.transition = 'all 0.8s ease-out';
+        msgDiv.style.transform = 'translate(-50%, -80%) scale(1.5)';
+        msgDiv.style.opacity = '0';
+        setTimeout(() => msgDiv.remove(), 800);
     });
   }
 }

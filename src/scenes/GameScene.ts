@@ -246,7 +246,19 @@ export class GameScene extends Scene {
       
       const clearPos = await this.grid.clearLines(lines.rows, lines.cols);
       const bonusPoints = (totalLines * 100) * totalLines;
-      const totalGained = placementPoints + bonusPoints;
+      let totalGained = placementPoints + bonusPoints;
+      
+      // --- PERFECT CLEAR BONUS ---
+      if (this.grid.isEmpty()) {
+          totalGained += 1000;
+          this.events.emit(EVENTS.SCORE_GAINED, { 
+              amount: 1000, 
+              x: GAME_WIDTH / 2, 
+              y: GAME_HEIGHT / 2,
+              isPerfect: true 
+          });
+      }
+
       this.updateScore(totalGained);
       this.events.emit(EVENTS.LINES_CLEARED, totalLines);
       if (clearPos) this.events.emit(EVENTS.SCORE_GAINED, { amount: totalGained, x: clearPos.x, y: clearPos.y });
