@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Prism Pulse</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #1a1a2e;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #app {
+        box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative; /* Ensure UI layer anchors to the game container */
+      }
+      canvas {
+        display: block;
+        margin: 0 auto;
+        image-rendering: pixelated; /* Sharp neon pixels */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Game Canvas will be injected here by Phaser -->
+      
+      <!-- UI Layer Overlay -->
+      <div id="ui-layer">
+        
+        <!-- Main Menu -->
+        <div id="main-menu" class="visible">
+          
+          <!-- Top Profile Bar -->
+          <div id="main-profile-bar" class="top-profile-bar">
+            <div id="main-user-info" class="user-profile-hidden">
+              <img id="main-user-avatar" src="" alt="">
+              <span id="main-user-nickname">Agent</span>
+            </div>
+            <button id="main-login-btn" class="mini-login-btn">Login</button>
+          </div>
+
+          <div class="menu-card" id="menu-card-main">
+            <div class="logo-container">
+              <h1 class="logo-title">Prism</h1>
+              <div class="logo-subtitle">Pulse</div>
+            </div>
+            <button id="play-btn" class="play-btn">Play</button>
+            <button id="leaderboard-btn">Leaderboard</button>
+          </div>
+
+          <!-- Mode Selection (Initially Hidden) -->
+          <div class="menu-card hidden" id="mode-select-card">
+            <h2 class="mode-title">Select Mode</h2>
+            <div class="mode-grid">
+              <button class="mode-btn" data-mode="classic">
+                <span class="mode-name">Classic</span>
+                <span class="mode-desc">Pure Strategy</span>
+              </button>
+              <button class="mode-btn" data-mode="blitz">
+                <span class="mode-name">Blitz</span>
+                <span class="mode-desc">2 Min Rush</span>
+              </button>
+              <button class="mode-btn" data-mode="bomb">
+                <span class="mode-name">Bomb</span>
+                <span class="mode-desc">Defuse or Die</span>
+              </button>
+            </div>
+            <button id="back-btn" class="secondary-btn" style="margin-top: 20px;">Back</button>
+          </div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+          <div class="score-container">
+            <span class="score-label">Score</span>
+            <span id="score-display" class="score-value">0</span>
+          </div>
+          
+          <!-- Central Timer for Blitz Mode -->
+          <div id="timer-display" class="timer-value hidden">2:00</div>
+
+          <div class="hud-right">
+            <div id="settings-btn" class="settings-trigger">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+            <div class="score-container high-score">
+              <span class="score-label">Best</span>
+              <span id="best-display" class="score-value">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Overlay -->
+        <div id="settings-menu" class="hidden">
+          <div class="settings-card">
+            <h2 class="settings-title">Settings</h2>
+            
+            <!-- User Profile Section -->
+            <div id="user-profile" class="user-profile-hidden">
+              <img id="user-avatar" src="" alt="Avatar">
+              <span id="user-nickname">Guest</span>
+              <button id="logout-btn" class="mini-btn">Logout</button>
+            </div>
+            <button id="google-login-btn" class="google-btn">Login with Google</button>
+
+            <div class="setting-item">
+              <span class="setting-label">Sound FX</span>
+              <label class="switch">
+                <input type="checkbox" id="sound-toggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">Music</span>
+              <label class="switch">
+                <input type="checkbox" id="music-toggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <button id="exit-to-menu-btn" class="secondary-btn">Exit to Menu</button>
+            <button id="settings-close-btn" class="close-btn">Done</button>
+          </div>
+        </div>
+
+        <!-- Info/Tutorial Overlay -->
+        <div id="info-overlay" class="hidden">
+          <div class="menu-card tutorial-card">
+            <div id="info-icon" class="info-icon">🧩</div>
+            <h2 id="info-title" class="info-title">Classic Mode</h2>
+            <p id="info-desc" class="info-desc">Place blocks to clear lines and score points. The game ends when no more pieces can fit.</p>
+            <button id="info-close-btn" class="play-btn">Got it!</button>
+          </div>
+        </div>
+
+        <!-- Leaderboard Overlay -->
+        <div id="leaderboard-overlay" class="hidden">
+          <div class="menu-card leaderboard-card">
+            <h2 class="mode-title">Hall of Fame</h2>
+            <div class="leaderboard-tabs">
+              <button class="tab-btn active" data-tab="classic">Classic</button>
+              <button class="tab-btn" data-tab="blitz">Blitz</button>
+              <button class="tab-btn" data-tab="bomb">Bomb</button>
+            </div>
+            <div id="leaderboard-list" class="leaderboard-list">
+              <div class="loading-text">Connecting to Pulse Network...</div>
+            </div>
+            <button id="leaderboard-close-btn" class="secondary-btn">Close</button>
+          </div>
+        </div>
+
+        <!-- Nickname Setup Overlay -->
+        <div id="nickname-overlay" class="hidden">
+          <div class="menu-card tutorial-card">
+            <h2 class="info-title">Initialize Agent</h2>
+            <p class="info-desc">Choose your identifier for the global Pulse Network.</p>
+            <input type="text" id="nickname-input" class="neon-input" placeholder="Enter Nickname..." maxlength="15">
+            <button id="nickname-save-btn" class="play-btn">Confirm Identity</button>
+          </div>
+        </div>
+
+        <!-- Profile Details Overlay -->
+        <div id="profile-overlay" class="hidden">
+          <div class="menu-card profile-details-card">
+            <h2 class="mode-title">Agent Profile</h2>
+            <div class="profile-header-large">
+              <img id="detail-user-avatar" src="" alt="Avatar">
+              <h3 id="detail-user-nickname">Agent</h3>
+            </div>
+            <div class="profile-scores-grid">
+              <div class="stat-box">
+                <span class="stat-label">Classic</span>
+                <span id="stat-classic" class="stat-value">0</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-label">Blitz</span>
+                <span id="stat-blitz" class="stat-value">0</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-label">Bomb</span>
+                <span id="stat-bomb" class="stat-value">0</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; width: 100%;">
+              <button id="profile-logout-btn" class="secondary-btn" style="flex: 1; border-color: #ff0055; color: #ff0055;">Logout</button>
+              <button id="profile-close-btn" class="secondary-btn" style="flex: 1;">Back</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over" class="hidden">
+          <div class="game-over-title">Game Over</div>
+          <div id="final-score-display" class="final-score">0</div>
+          <button id="restart-btn" class="play-btn">Try Again</button>
+        </div>
+
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
