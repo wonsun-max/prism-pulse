@@ -5,6 +5,7 @@ import { LauncherScene } from './scenes/LauncherScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { GAME_WIDTH, GAME_HEIGHT } from './consts';
+import { AdManager } from './managers/AdManager';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -25,8 +26,12 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [Preloader, LauncherScene, GameScene, UIScene],
 };
 
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? 'Loaded' : 'MISSING');
   console.log('Supabase Key:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Loaded' : 'MISSING');
+  
+  // Initialize AdMob
+  await AdManager.initialize();
+  
   new Phaser.Game(config);
 });

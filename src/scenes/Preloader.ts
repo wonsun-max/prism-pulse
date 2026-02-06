@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { COLORS, CELL_SIZE } from '../consts';
+import { COLORS, CELL_SIZE, GAME_WIDTH, GAME_HEIGHT } from '../consts';
 
 export class Preloader extends Scene {
   constructor() {
@@ -7,7 +7,9 @@ export class Preloader extends Scene {
   }
 
   preload() {
-    // Generate textures programmatically
+    this.createLoadingScreen();
+
+    // 1. Generate textures
     this.createBlockTexture();
     this.createGridCellTexture();
     this.createParticleTexture();
@@ -15,58 +17,80 @@ export class Preloader extends Scene {
     this.createButtonTexture();
     this.createMascotTexture();
 
-    // Audio Loading
-    // In Vite, public/ folder is served at root /
-    // So assets/game.mp3 maps to public/assets/game.mp3
+    // 2. Load Audio
     this.load.path = 'assets/';
     this.load.audio('menu_music', 'menu.wav');
     this.load.audio('game_music', 'game.mp3');
   }
 
   create() {
+    const htmlLoader = document.getElementById('initial-loader');
+    if (htmlLoader) {
+        htmlLoader.style.opacity = '0';
+        setTimeout(() => htmlLoader.remove(), 800);
+    }
     this.scene.start('LauncherScene');
   }
 
+  private createLoadingScreen() {
+    const centerX = GAME_WIDTH / 2;
+    const centerY = GAME_HEIGHT / 2;
+
+    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, COLORS.BACKGROUND).setOrigin(0);
+
+    this.add.text(centerX, centerY - 100, 'PRISM PULSE', {
+        fontFamily: 'Orbitron',
+        fontSize: '48px',
+        fontStyle: '900',
+        color: '#fff'
+    }).setOrigin(0.5).setShadow(0, 0, '#00f3ff', 20);
+
+    const barWidth = 400;
+    const barHeight = 4;
+    const outline = this.add.rectangle(centerX, centerY + 20, barWidth + 8, barHeight + 8);
+    outline.setStrokeStyle(2, 0x00f3ff, 0.3);
+
+    const progress = this.add.rectangle(centerX - barWidth / 2, centerY + 20, 0, barHeight, 0x00f3ff).setOrigin(0, 0.5);
+    const percentText = this.add.text(centerX, centerY + 60, '0%', {
+        fontFamily: 'Orbitron',
+        fontSize: '18px',
+        fontStyle: '800',
+        color: '#bc13fe'
+    }).setOrigin(0.5);
+
+    this.load.on('progress', (value: number) => {
+        progress.width = barWidth * value;
+        percentText.setText(`${Math.floor(value * 100)}%`);
+    });
+  }
+
   private createBlockTexture() {
-    const size = CELL_SIZE - 2; // Full size for generation
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-    
-    // Outer Neon Stroke (Sharp & Bright)
+    const size = CELL_SIZE - 2;
+    const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.lineStyle(3, 0xffffff, 1);
     graphics.strokeRect(2, 2, size - 4, size - 4);
-    
-    // Glassy Interior (Clean)
     graphics.fillStyle(0xffffff, 0.2);
     graphics.fillRect(2, 2, size - 4, size - 4);
-    
-    // Top Bevel Highlight (Premium look)
     graphics.fillStyle(0xffffff, 0.6);
     graphics.fillRect(4, 4, size - 8, 4);
-    
     graphics.generateTexture('block_cell', size, size);
     graphics.destroy();
   }
 
   private createGridCellTexture() {
     const size = CELL_SIZE;
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-
-    // Subtle Dark Frame
+    const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.lineStyle(2, 0x1f1f3a, 0.5);
     graphics.strokeRect(1, 1, size - 2, size - 2);
-    
-    // Deep Void Interior
     graphics.fillStyle(0x0a0a1a, 0.8);
     graphics.fillRect(2, 2, size - 4, size - 2);
-    
     graphics.generateTexture('grid_cell', size, size);
     graphics.destroy();
   }
 
   private createParticleTexture() {
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+    const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0xffffff, 1);
-    // Diamond spark
     graphics.beginPath();
     graphics.moveTo(10, 0);
     graphics.lineTo(20, 10);
@@ -74,13 +98,12 @@ export class Preloader extends Scene {
     graphics.lineTo(0, 10);
     graphics.closePath();
     graphics.fillPath();
-    
-    graphics.generateTexture('shard', 20, 20); // Keep name 'shard' to avoid breaking Grid.ts
+    graphics.generateTexture('shard', 20, 20);
     graphics.destroy();
   }
 
   private createPanelTexture() {
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+    const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0xffffff, 0.1);
     graphics.fillRoundedRect(0, 0, 400, 200, 48);
     graphics.generateTexture('glass_panel', 400, 200);
@@ -88,7 +111,7 @@ export class Preloader extends Scene {
   }
 
   private createButtonTexture() {
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+    const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0xffffff, 1);
     graphics.fillRoundedRect(0, 0, 320, 80, 28);
     graphics.generateTexture('btn_bg', 320, 80);
@@ -96,7 +119,7 @@ export class Preloader extends Scene {
   }
 
   private createMascotTexture() {
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+    const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.lineStyle(4, COLORS.ACCENT_CYAN, 1);
     graphics.fillStyle(COLORS.ACCENT_PURPLE, 0.5);
     graphics.beginPath();

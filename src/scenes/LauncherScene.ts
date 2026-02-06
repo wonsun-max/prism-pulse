@@ -2,10 +2,10 @@ import { Scene } from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../consts';
 import { AudioManager } from '../managers/AudioManager';
 import { supabase } from '../supabase';
-import { Storage } from '../utils/Storage';
+import { AdManager } from '../managers/AdManager';
 
 export class LauncherScene extends Scene {
-  private audio: AudioManager;
+  private audio!: AudioManager;
   
   // Leaderboard DOM
   private leaderboardOverlay: HTMLElement | null = null;
@@ -15,9 +15,12 @@ export class LauncherScene extends Scene {
 
   // Main Menu Profile DOM
   private mainLoginBtn: HTMLElement | null = null;
+  private mainSettingsBtn: HTMLElement | null = null;
   private mainUserInfo: HTMLElement | null = null;
   private mainUserAvatar: HTMLImageElement | null = null;
-  private mainUserNickname: HTMLElement | null = null;
+  private settingsMenu: HTMLElement | null = null;
+  private settingsCloseBtn: HTMLElement | null = null;
+  private exitToMenuBtn: HTMLElement | null = null;
 
   // Nickname DOM
   private nicknameOverlay: HTMLElement | null = null;
@@ -34,18 +37,29 @@ export class LauncherScene extends Scene {
   private profileCloseBtn: HTMLElement | null = null;
   private profileLogoutBtn: HTMLElement | null = null;
 
+  // Legal DOM
+  private legalOverlay: HTMLElement | null = null;
+  private legalAcceptBtn: HTMLElement | null = null;
+
+  // Login Prompt DOM
+  private loginPromptOverlay: HTMLElement | null = null;
+  private promptLoginBtn: HTMLElement | null = null;
+  private promptCloseBtn: HTMLElement | null = null;
+
   constructor() {
     super('LauncherScene');
   }
 
   create() {
-    console.log('LauncherScene Create');
     this.audio = new AudioManager(this);
     this.audio.playMusic('menu_music', 0.4);
     
     this.cameras.main.setBackgroundColor(COLORS.BACKGROUND);
     this.createBackground();
     
+    // --- AD BANNER ---
+    AdManager.showBanner();
+
     const mainMenu = document.getElementById('main-menu');
     const menuCardMain = document.getElementById('menu-card-main');
     const modeSelectCard = document.getElementById('mode-select-card');
@@ -53,18 +67,20 @@ export class LauncherScene extends Scene {
     const leaderboardBtn = document.getElementById('leaderboard-btn');
     const backBtn = document.getElementById('back-btn');
 
-    const hud = document.getElementById('hud');
-    const gameOver = document.getElementById('game-over');
-
     this.leaderboardOverlay = document.getElementById('leaderboard-overlay');
     this.leaderboardList = document.getElementById('leaderboard-list');
     this.leaderboardCloseBtn = document.getElementById('leaderboard-close-btn');
 
     // Main Profile Bar
     this.mainLoginBtn = document.getElementById('main-login-btn');
+    this.mainSettingsBtn = document.getElementById('main-settings-btn');
     this.mainUserInfo = document.getElementById('main-user-info');
     this.mainUserAvatar = document.getElementById('main-user-avatar') as HTMLImageElement;
-    this.mainUserNickname = document.getElementById('main-user-nickname');
+
+    // Settings
+    this.settingsMenu = document.getElementById('settings-menu');
+    this.settingsCloseBtn = document.getElementById('settings-close-btn');
+    this.exitToMenuBtn = document.getElementById('exit-to-menu-btn');
 
     // Nickname Overlay
     this.nicknameOverlay = document.getElementById('nickname-overlay');
@@ -81,6 +97,15 @@ export class LauncherScene extends Scene {
     this.profileCloseBtn = document.getElementById('profile-close-btn');
     this.profileLogoutBtn = document.getElementById('profile-logout-btn');
 
+    // Legal Overlay
+    this.legalOverlay = document.getElementById('legal-overlay');
+    this.legalAcceptBtn = document.getElementById('legal-accept-btn');
+
+    // Login Prompt Overlay
+    this.loginPromptOverlay = document.getElementById('login-prompt-overlay');
+    this.promptLoginBtn = document.getElementById('prompt-login-btn');
+    this.promptCloseBtn = document.getElementById('prompt-close-btn');
+
     // Reset UI state
     mainMenu?.classList.remove('hidden');
     mainMenu?.classList.add('visible');
@@ -89,10 +114,20 @@ export class LauncherScene extends Scene {
     this.leaderboardOverlay?.classList.add('hidden');
     this.nicknameOverlay?.classList.add('hidden');
     this.profileOverlay?.classList.add('hidden');
-    hud?.classList.add('hidden');
-    gameOver?.classList.add('hidden');
+    this.legalOverlay?.classList.add('hidden');
+    this.loginPromptOverlay?.classList.add('hidden');
 
+    this.checkLegalAgreement();
     this.updateMainAuthUI();
+
+    // --- BROWSER AUTOPLAY FIX ---
+    const kickstartAudio = () => {
+        this.audio.playMusic('menu_music', 0.4);
+        window.removeEventListener('pointerdown', kickstartAudio);
+        window.removeEventListener('keydown', kickstartAudio);
+    };
+    window.addEventListener('pointerdown', kickstartAudio, { once: true });
+    window.addEventListener('keydown', kickstartAudio, { once: true });
 
     if (playBtn) {
       const newBtn = playBtn.cloneNode(true) as HTMLElement;
@@ -107,9 +142,17 @@ export class LauncherScene extends Scene {
     if (leaderboardBtn) {
       const newBtn = leaderboardBtn.cloneNode(true) as HTMLElement;
       leaderboardBtn.parentNode?.replaceChild(newBtn, leaderboardBtn);
-      newBtn.onclick = () => {
+      newBtn.onclick = async () => {
         this.audio.playClick();
-        this.showLeaderboard();
+        if (!supabase) return;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            this.showLeaderboard();
+        } else {
+            this.loginPromptOverlay?.classList.remove('hidden');
+            this.loginPromptOverlay?.classList.add('visible');
+            menuCardMain?.classList.add('hidden');
+        }
       };
     }
 
@@ -120,17 +163,53 @@ export class LauncherScene extends Scene {
         newBtn.onclick = async () => {
             this.audio.playClick();
             if (!supabase) return;
-            
             await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: { 
                     redirectTo: `${window.location.origin}/`,
-                    queryParams: {
-                        access_type: 'offline',
-                        prompt: 'consent',
-                    }
+                    queryParams: { access_type: 'offline', prompt: 'consent' }
                 }
             });
+        };
+    }
+
+    if (this.promptLoginBtn) {
+        this.promptLoginBtn.onclick = async () => {
+            this.audio.playClick();
+            if (!supabase) return;
+            await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { 
+                    redirectTo: `${window.location.origin}/`,
+                    queryParams: { access_type: 'offline', prompt: 'consent' }
+                }
+            });
+        };
+    }
+
+    if (this.promptCloseBtn) {
+        this.promptCloseBtn.onclick = () => {
+            this.audio.playClick();
+            this.loginPromptOverlay?.classList.remove('visible');
+            this.loginPromptOverlay?.classList.add('hidden');
+            menuCardMain?.classList.remove('hidden');
+        };
+    }
+
+    if (this.mainSettingsBtn) {
+        this.mainSettingsBtn.onclick = () => {
+            this.audio.playClick();
+            this.settingsMenu?.classList.remove('hidden');
+            this.settingsMenu?.classList.add('visible');
+            if (this.exitToMenuBtn) this.exitToMenuBtn.style.display = 'none';
+        };
+    }
+
+    if (this.settingsCloseBtn) {
+        this.settingsCloseBtn.onclick = () => {
+            this.audio.playClick();
+            this.settingsMenu?.classList.remove('visible');
+            this.settingsMenu?.classList.add('hidden');
         };
     }
 
@@ -146,6 +225,7 @@ export class LauncherScene extends Scene {
             this.audio.playClick();
             this.profileOverlay?.classList.add('hidden');
             this.profileOverlay?.classList.remove('visible');
+            menuCardMain?.classList.remove('hidden');
         };
     }
 
@@ -167,15 +247,26 @@ export class LauncherScene extends Scene {
         };
     }
 
+    if (this.legalAcceptBtn) {
+        this.legalAcceptBtn.onclick = () => {
+            this.audio.playClick();
+            localStorage.setItem('prism_legal_accepted', 'true');
+            this.legalOverlay?.classList.add('hidden');
+            this.legalOverlay?.classList.remove('visible');
+            document.getElementById('menu-card-main')?.classList.remove('hidden');
+            this.audio.playMusic('menu_music', 0.4);
+        };
+    }
+
     if (this.leaderboardCloseBtn) {
         this.leaderboardCloseBtn.onclick = () => {
             this.audio.playClick();
             this.leaderboardOverlay?.classList.add('hidden');
             this.leaderboardOverlay?.classList.remove('visible');
+            menuCardMain?.classList.remove('hidden');
         };
     }
 
-    // Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
         const el = btn as HTMLElement;
         el.onclick = () => {
@@ -211,57 +302,53 @@ export class LauncherScene extends Scene {
     });
   }
 
-  private async updateMainAuthUI() {
-      if (!supabase) {
-          this.mainLoginBtn?.classList.add('hidden');
-          return;
+  private checkLegalAgreement() {
+      const accepted = localStorage.getItem('prism_legal_accepted');
+      if (!accepted) {
+          this.legalOverlay?.classList.remove('hidden');
+          this.legalOverlay?.classList.add('visible');
+          document.getElementById('menu-card-main')?.classList.add('hidden');
       }
+  }
+
+  private async updateMainAuthUI() {
+      if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       const menuCardMain = document.getElementById('menu-card-main');
 
       if (user) {
-          // Logged In
           this.mainLoginBtn?.classList.add('hidden');
           this.mainUserInfo?.classList.remove('user-profile-hidden');
           this.mainUserInfo?.classList.add('user-profile-visible');
           
-          // 1. Show cached name immediately to prevent flicker
-          const cachedName = localStorage.getItem('prism_nick_cache');
-          if (cachedName && this.mainUserNickname) {
-              this.mainUserNickname.innerText = cachedName;
-          } else if (this.mainUserNickname) {
-              this.mainUserNickname.innerText = user.user_metadata.full_name || 'Agent';
-          }
-
-          // 2. Fetch the "Truth" from DB
-          const { data: profile, error } = await supabase
+          const { data: profile } = await supabase
               .from('profiles')
               .select('nickname, avatar_url')
               .eq('id', user.id)
               .maybeSingle();
 
           if (!profile || !profile.nickname) {
-              console.log('[Auth] Profile not found, showing setup');
               this.nicknameOverlay?.classList.remove('hidden');
               this.nicknameOverlay?.classList.add('visible');
               menuCardMain?.classList.add('hidden');
               if (this.nicknameInput) this.nicknameInput.value = user.user_metadata.full_name || '';
           } else {
-              console.log('[Auth] Profile loaded:', profile.nickname);
               localStorage.setItem('prism_nick_cache', profile.nickname);
-              if (this.mainUserNickname) this.mainUserNickname.innerText = profile.nickname;
               this.nicknameOverlay?.classList.add('hidden');
-              menuCardMain?.classList.remove('hidden');
+              if (localStorage.getItem('prism_legal_accepted')) {
+                  menuCardMain?.classList.remove('hidden');
+              }
           }
 
-          if (this.mainUserAvatar) this.mainUserAvatar.src = user.user_metadata.avatar_url || '';
+          if (this.mainUserAvatar) this.mainUserAvatar.src = profile?.avatar_url || user.user_metadata.avatar_url || '';
       } else {
-          // Logged Out
           localStorage.removeItem('prism_nick_cache');
           this.mainLoginBtn?.classList.remove('hidden');
           this.mainUserInfo?.classList.add('user-profile-hidden');
           this.mainUserInfo?.classList.remove('user-profile-visible');
-          menuCardMain?.classList.remove('hidden');
+          if (localStorage.getItem('prism_legal_accepted')) {
+              menuCardMain?.classList.remove('hidden');
+          }
           this.nicknameOverlay?.classList.add('hidden');
       }
   }
@@ -271,10 +358,12 @@ export class LauncherScene extends Scene {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const menuCardMain = document.getElementById('menu-card-main');
+      menuCardMain?.classList.add('hidden');
+
       this.profileOverlay?.classList.remove('hidden');
       this.profileOverlay?.classList.add('visible');
 
-      // Set avatar and nickname
       const { data: profile } = await supabase
           .from('profiles')
           .select('nickname, avatar_url')
@@ -284,18 +373,16 @@ export class LauncherScene extends Scene {
       if (this.detailUserAvatar) this.detailUserAvatar.src = profile?.avatar_url || user.user_metadata.avatar_url;
       if (this.detailUserNickname) this.detailUserNickname.innerText = profile?.nickname || user.user_metadata.full_name;
 
-      // Fetch Scores
       const { data: scores } = await supabase
           .from('scores')
           .select('mode, score')
           .eq('user_id', user.id);
 
-      // Reset values first
       if (this.statClassic) this.statClassic.innerText = '0';
       if (this.statBlitz) this.statBlitz.innerText = '0';
       if (this.statBomb) this.statBomb.innerText = '0';
 
-      scores?.forEach(s => {
+      scores?.forEach((s: any) => {
           if (s.mode === 'classic' && this.statClassic) this.statClassic.innerText = s.score.toLocaleString();
           if (s.mode === 'blitz' && this.statBlitz) this.statBlitz.innerText = s.score.toLocaleString();
           if (s.mode === 'bomb' && this.statBomb) this.statBomb.innerText = s.score.toLocaleString();
@@ -305,29 +392,27 @@ export class LauncherScene extends Scene {
   private async handleNicknameSave() {
       const name = this.nicknameInput?.value.trim();
       if (!name) return;
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const { error } = await supabase.from('profiles').upsert({
           id: user.id,
           nickname: name,
           avatar_url: user.user_metadata.avatar_url
       });
-
       if (error) {
-          alert('Name already taken or database error. Try another.');
+          alert('Name already taken or database error.');
           return;
       }
-
       this.nicknameOverlay?.classList.add('hidden');
       this.nicknameOverlay?.classList.remove('visible');
       document.getElementById('menu-card-main')?.classList.remove('hidden');
       localStorage.setItem('prism_nick_cache', name);
-      if (this.mainUserNickname) this.mainUserNickname.innerText = name;
   }
 
   private showLeaderboard() {
+      const menuCardMain = document.getElementById('menu-card-main');
+      menuCardMain?.classList.add('hidden');
+
       this.leaderboardOverlay?.classList.remove('hidden');
       this.leaderboardOverlay?.classList.add('visible');
       this.fetchLeaderboardData();
@@ -336,14 +421,15 @@ export class LauncherScene extends Scene {
   private async fetchLeaderboardData() {
       if (!this.leaderboardList) return;
       if (!supabase) {
-          this.leaderboardList.innerHTML = '<div class="loading-text" style="color: #ff0055">Pulse Network Offline: Credentials not configured.</div>';
+          this.leaderboardList.innerHTML = '<div class="loading-text" style="color: #ff0055">Pulse Network Offline.</div>';
           return;
       }
-      this.leaderboardList.innerHTML = '<div class="loading-text">Synchronizing with Pulse Network...</div>';
-
+      this.leaderboardList.innerHTML = '<div class="loading-text">Synchronizing...</div>';
       const { data: { user } } = await supabase.auth.getUser();
-      const platform = navigator.userAgent.toLowerCase().includes('iphone') || 
-                       navigator.userAgent.toLowerCase().includes('ipad') ? 'ios' : 'android';
+      
+      // Capacitor native detection
+      // @ts-ignore
+      const platform = window.Capacitor ? (window.Capacitor.getPlatform() === 'ios' ? 'ios' : 'android') : 'android';
 
       const { data, error } = await supabase
           .from('scores')
@@ -352,17 +438,14 @@ export class LauncherScene extends Scene {
           .eq('platform', platform)
           .order('score', { ascending: false })
           .limit(50);
-
       if (error) {
-          this.leaderboardList.innerHTML = `<div class="loading-text" style="color: #ff0055">Pulse Network Error: ${error.message}</div>`;
+          this.leaderboardList.innerHTML = `<div class="loading-text" style="color: #ff0055">Error: ${error.message}</div>`;
           return;
       }
-
       if (!data || data.length === 0) {
-          this.leaderboardList.innerHTML = '<div class="loading-text">No records found in this sector.</div>';
+          this.leaderboardList.innerHTML = '<div class="loading-text">No records.</div>';
           return;
       }
-
       this.leaderboardList.innerHTML = '';
       data.forEach((entry: any, index: number) => {
           const rank = index + 1;
@@ -370,7 +453,6 @@ export class LauncherScene extends Scene {
           const isMe = user && entry.user_id === user.id;
           const item = document.createElement('div');
           item.className = `leaderboard-entry ${isMe ? 'is-me' : ''}`;
-          
           item.innerHTML = `
               <div class="rank rank-${rank <= 3 ? rank : 'other'}">${rank}</div>
               <div class="player-info">
@@ -392,7 +474,6 @@ export class LauncherScene extends Scene {
         .setScale(Phaser.Math.FloatBetween(1, 3))
         .setTint(i % 2 === 0 ? COLORS.ACCENT_CYAN : COLORS.ACCENT_PURPLE)
         .setBlendMode(Phaser.BlendModes.ADD);
-
       this.tweens.add({
         targets: shard,
         x: x + Phaser.Math.Between(-100, 100),

@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { CELL_SIZE, COLORS } from '../consts';
+import { CELL_SIZE } from '../consts';
 
 export const SHAPES = [
   // --- Tetris Classics ---
@@ -31,7 +31,6 @@ export class Block extends Phaser.GameObjects.Container {
   public color: number;
   private originalX: number;
   private originalY: number;
-  private dragActive: boolean = false;
   private backgroundImages: Phaser.GameObjects.Image[] = [];
   private initialTrayScale: number = 1.0;
 
@@ -101,7 +100,6 @@ export class Block extends Phaser.GameObjects.Container {
     this.scene.input.setDraggable(this);
 
     this.on('dragstart', () => {
-      this.dragActive = true;
       // Scale up to full size for the grid
       this.scene.tweens.add({
           targets: this,
@@ -113,7 +111,7 @@ export class Block extends Phaser.GameObjects.Container {
       this.depth = 100;
     });
 
-    this.on('drag', (pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+    this.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
       this.x = dragX;
       // Offset Y slightly while dragging so finger doesn't obscure block
       this.y = dragY - 100; 
@@ -121,7 +119,6 @@ export class Block extends Phaser.GameObjects.Container {
     });
 
     this.on('dragend', () => {
-      this.dragActive = false;
       this.depth = 0;
       this.emit('dropped', this);
     });

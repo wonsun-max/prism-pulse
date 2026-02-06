@@ -13,6 +13,7 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.2",
     "phaser": "^3.80.0"
   }
 }

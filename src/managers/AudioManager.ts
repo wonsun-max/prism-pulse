@@ -3,14 +3,45 @@ import { Scene } from 'phaser';
 export class AudioManager {
   private scene: Scene;
   private audioContext: AudioContext;
+  
+  private static soundEnabled: boolean = true;
+  private static musicEnabled: boolean = true;
+  private static currentMusicKey: string = '';
+  private static currentMusicVolume: number = 0.5;
 
   constructor(scene: Scene) {
     this.scene = scene;
     // @ts-ignore
     this.audioContext = scene.sound.context as AudioContext;
+    this.refreshSettings();
+  }
+
+  public refreshSettings() {
+    const wasMusicEnabled = AudioManager.musicEnabled;
+    
+    AudioManager.soundEnabled = localStorage.getItem('prism-sound') !== 'false';
+    AudioManager.musicEnabled = localStorage.getItem('prism-music') !== 'false';
+    
+    if (!AudioManager.musicEnabled && wasMusicEnabled) {
+        this.stopAllActiveMusic();
+    } 
+    else if (AudioManager.musicEnabled && !wasMusicEnabled) {
+        if (AudioManager.currentMusicKey) {
+            this.playMusic(AudioManager.currentMusicKey, AudioManager.currentMusicVolume);
+        }
+    }
+  }
+
+  private stopAllActiveMusic() {
+      // Use scene.sound.stopByKey to be precise
+      this.scene.sound.stopByKey('menu_music');
+      this.scene.sound.stopByKey('game_music');
+      this.clearSynthLoop();
   }
 
   private createOscillator(freq: number, type: OscillatorType, duration: number, volume: number = 0.1) {
+    if (!AudioManager.soundEnabled) return; 
+
     const osc = this.audioContext.createOscillator();
     const gain = this.audioContext.createGain();
 
@@ -28,18 +59,14 @@ export class AudioManager {
   }
 
   playPlace() {
-    // A quick, low-frequency 'thud' for placement
     this.createOscillator(150, 'sine', 0.1, 0.3);
     this.createOscillator(100, 'triangle', 0.1, 0.2);
   }
 
   playClear() {
-    // A shimmery, rising arpeggio for breaking blocks
-    const now = this.audioContext.currentTime;
     [440, 554.37, 659.25, 880].forEach((f, i) => {
       setTimeout(() => this.createOscillator(f, 'sine', 0.4, 0.1), i * 50);
     });
-    // Add a little 'white noise' burst for the break crunch
     this.createOscillator(200, 'sawtooth', 0.2, 0.05);
   }
 
@@ -52,34 +79,36 @@ export class AudioManager {
   }
 
   playGameOver() {
-    const now = this.audioContext.currentTime;
     [440, 330, 220].forEach((f, i) => {
       setTimeout(() => this.createOscillator(f, 'square', 0.5, 0.05), i * 200);
     });
   }
 
   playMusic(key: string, volume: number = 0.5) {
-    try {
-      // Check if sound exists in the cache (loaded successfully)
-      if (this.scene.cache.audio.exists(key)) {
-        // Stop synth fallback if it was playing
-        this.clearSynthLoop();
+    // 1. Stop any other music track before starting a new one
+    if (AudioManager.currentMusicKey && AudioManager.currentMusicKey !== key) {
+        this.scene.sound.stopByKey(AudioManager.currentMusicKey);
+    }
 
+    AudioManager.currentMusicKey = key;
+    AudioManager.currentMusicVolume = volume;
+
+    if (!AudioManager.musicEnabled) return;
+
+    try {
+      if (this.scene.cache.audio.exists(key)) {
+        this.clearSynthLoop();
         let music = this.scene.sound.get(key);
         if (!music) {
           music = this.scene.sound.add(key, { loop: true, volume });
         }
-        
         if (!music.isPlaying) {
           music.play({ loop: true, volume });
         }
       } else {
-        // Fallback: Simple synth pulse if no file found or failed to load
-        console.warn(`Audio key "${key}" not found in cache. Falling back to synth.`);
         this.playSynthLoop(key === 'menu_music' ? 330 : 220);
       }
     } catch (e) {
-      console.error("AudioManager Error:", e);
       this.playSynthLoop(220);
     }
   }
@@ -93,9 +122,13 @@ export class AudioManager {
 
   private synthLoopInterval: any = null;
   private playSynthLoop(baseFreq: number) {
-    if (this.synthLoopInterval) return;
+    if (!AudioManager.musicEnabled || this.synthLoopInterval) return;
     
     this.synthLoopInterval = setInterval(() => {
+        if (!AudioManager.musicEnabled) {
+            this.clearSynthLoop();
+            return;
+        }
         this.createOscillator(baseFreq, 'triangle', 0.2, 0.05);
         setTimeout(() => {
             this.createOscillator(baseFreq * 1.5, 'triangle', 0.1, 0.03);
@@ -104,15 +137,17 @@ export class AudioManager {
   }
 
   stopMusic(key: string) {
-    this.clearSynthLoop();
-    const music = this.scene.sound.get(key);
-    if (music) {
-      music.stop();
+    if (AudioManager.currentMusicKey === key) {
+        AudioManager.currentMusicKey = '';
     }
+    this.clearSynthLoop();
+    this.scene.sound.stopByKey(key);
   }
 
   stopAllMusic() {
-    this.scene.sound.stopAll();
+    AudioManager.currentMusicKey = '';
+    this.clearSynthLoop();
+    this.scene.sound.stopByKey('menu_music');
+    this.scene.sound.stopByKey('game_music');
   }
 }
-

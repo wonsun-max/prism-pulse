@@ -6,11 +6,11 @@ import { Storage, GameSession } from '../utils/Storage';
 import { AudioManager } from '../managers/AudioManager';
 
 export class GameScene extends Scene {
-  private grid: Grid;
+  private grid!: Grid;
   private blocks: Block[] = [];
   private score: number = 0;
   private highScore: number = 0;
-  private audio: AudioManager;
+  private audio!: AudioManager;
   
   private currentMode: string = GAME_MODES.CLASSIC;
   
@@ -108,12 +108,7 @@ export class GameScene extends Scene {
   private updateBlitzTimer() {
       this.blitzTimeLeft--;
       this.events.emit(EVENTS.TIMER_UPDATED, this.blitzTimeLeft);
-      
-      // Save blitz time occasionally (every 5 seconds)
-      if (this.blitzTimeLeft % 5 === 0) {
-          this.saveCurrentProgress();
-      }
-
+      if (this.blitzTimeLeft % 5 === 0) this.saveCurrentProgress();
       if (this.blitzTimeLeft <= 0) {
           if (this.blitzTimerEvent) this.blitzTimerEvent.remove();
           this.gameOver();
@@ -123,7 +118,6 @@ export class GameScene extends Scene {
   private restoreBlocks(savedBlocks: { matrix: number[][], color: number }[]) {
       const blockAreaY = GAME_HEIGHT - 250;
       const spacing = GAME_WIDTH / 4;
-      
       savedBlocks.forEach((b, i) => {
           const block = new Block(this, spacing * (i + 1), blockAreaY, b.matrix, b.color);
           block.setInitialScale(0.4); // Reduced scale to prevent overlap
@@ -135,7 +129,6 @@ export class GameScene extends Scene {
 
   private spawnBlocks() {
     if (this.blocks.length > 0) return;
-
     const blockAreaY = GAME_HEIGHT - 250;
     const spacing = GAME_WIDTH / 4;
     const availableColors = [
@@ -143,7 +136,6 @@ export class GameScene extends Scene {
         COLORS.PRISM_GREEN, COLORS.PRISM_BLUE, COLORS.PRISM_PINK,
         COLORS.ACCENT_CYAN, COLORS.ACCENT_PURPLE
     ];
-
     const fillRate = this.grid.getFillRate();
     const smallShapes = [7, 8, 9];
     const mediumShapes = [0, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13];
@@ -170,7 +162,6 @@ export class GameScene extends Scene {
           else if (roll < 0.6) shapeIdx = mediumShapes[Phaser.Math.Between(0, mediumShapes.length - 1)];
           else shapeIdx = largeShapes[Phaser.Math.Between(0, largeShapes.length - 1)];
       }
-
       const color = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
       const block = new Block(this, spacing * (i + 1), blockAreaY, SHAPES[shapeIdx], color as number);
       block.setInitialScale(0.4); // Reduced scale
@@ -181,7 +172,6 @@ export class GameScene extends Scene {
       block.setScale(0);
       this.tweens.add({ targets: block, scale: 0.4, duration: 300, delay: i * 100, ease: 'Back.out' });
     }
-    
     this.saveCurrentProgress();
     this.checkGameOver();
   }
@@ -218,20 +208,21 @@ export class GameScene extends Scene {
   private handleBlockDrop(block: Block) {
     this.grid.clearPreview();
     const dropPos = this.grid.worldToGrid(block.x, block.y);
-
     if (dropPos) {
       const rowOffset = Math.floor(block.matrix.length / 2);
       const colOffset = Math.floor(block.matrix[0].length / 2);
       const gridRow = dropPos.row - rowOffset;
       const gridCol = dropPos.col - colOffset;
-
       if (this.grid.canPlace(block.matrix, gridRow, gridCol)) {
         const blockSize = block.size;
         const dropX = block.x;
         const dropY = block.y;
         this.grid.placeBlock(block.matrix, gridRow, gridCol, block.color);
         this.audio.playPlace();
-        this.cameras.main.shake(100, 0.005);
+        
+        // --- JUICE: IMPACT ---
+        this.cameras.main.shake(150, 0.008);
+        
         this.blocks = this.blocks.filter(b => b !== block);
         block.destroy();
         this.onBlockPlaced(blockSize, dropX, dropY);
@@ -249,7 +240,10 @@ export class GameScene extends Scene {
     if (totalLines > 0) {
       this.audio.playClear();
       if (totalLines > 1) this.audio.playCombo(totalLines);
+      
+      // --- JUICE: CLEAR SHAKE ---
       this.cameras.main.shake(300, 0.02);
+      
       const clearPos = await this.grid.clearLines(lines.rows, lines.cols);
       const bonusPoints = (totalLines * 100) * totalLines;
       const totalGained = placementPoints + bonusPoints;
@@ -261,7 +255,6 @@ export class GameScene extends Scene {
         this.events.emit(EVENTS.SCORE_GAINED, { amount: placementPoints, x: x, y: y });
         if (this.currentMode === GAME_MODES.BOMB) this.handleBombMechanic();
     }
-    
     if (this.currentMode === GAME_MODES.BOMB) {
        const exploded = this.grid.tickBombs();
        if (exploded) {
@@ -269,11 +262,10 @@ export class GameScene extends Scene {
            return;
        }
     }
-
     if (this.blocks.length === 0) {
       this.spawnBlocks();
     } else {
-        this.saveCurrentProgress(); // Save state after every move
+        this.saveCurrentProgress();
         this.checkGameOver();
     }
   }
@@ -281,7 +273,11 @@ export class GameScene extends Scene {
   private handleBombMechanic() {
       if (this.movesCount % 5 === 0) {
           const added = this.grid.addBombToRandomCell();
-          if (added) this.events.emit(EVENTS.BOMB_SPAWNED);
+          if (added) {
+             this.events.emit(EVENTS.BOMB_SPAWNED);
+             // --- JUICE: BOMB WARNING ---
+             this.cameras.main.flash(200, 255, 0, 0, true);
+          }
       }
   }
 
@@ -311,10 +307,20 @@ export class GameScene extends Scene {
       if (!canPlaceAny && this.blocks.length > 0) this.gameOver();
   }
 
-  private gameOver() {
-      Storage.saveSession(this.currentMode, null); // Clear save on game over
-      this.audio.playGameOver();
-      if (this.blitzTimerEvent) this.blitzTimerEvent.remove();
-      this.events.emit(EVENTS.GAME_OVER);
+    private async gameOver() {
+
+        Storage.saveSession(this.currentMode, null);
+
+        this.audio.playGameOver();
+
+        if (this.blitzTimerEvent) this.blitzTimerEvent.remove();
+
+  
+
+        this.events.emit(EVENTS.GAME_OVER);
+
+    }
+
   }
-}
+
+  

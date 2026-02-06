@@ -7,6 +7,53 @@ body {
   margin: 0;
 }
 
+/* Initial Splash Loader */
+#initial-loader {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #050510;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Top of everything */
+  transition: opacity 0.8s ease-out;
+}
+
+.loader-content {
+  text-align: center;
+}
+
+.loader-title {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px #00f3ff;
+  margin-bottom: 30px;
+}
+
+.loader-pulse {
+  width: 100px;
+  height: 2px;
+  background: #00f3ff;
+  margin: 0 auto;
+  box-shadow: 0 0 15px #00f3ff;
+  animation: pulse-width 2s infinite ease-in-out;
+}
+
+@keyframes pulse-width {
+  0%, 100% { width: 50px; opacity: 0.3; }
+  50% { width: 200px; opacity: 1; }
+}
+
+.loader-status {
+  margin-top: 20px;
+  font-size: 12px;
+  letter-spacing: 4px;
+  color: #8899aa;
+  font-weight: 800;
+}
+
 /* Moving Synthwave Grid Background */
 #app {
   box-shadow: 0 0 100px rgba(0, 243, 255, 0.1);
@@ -77,14 +124,16 @@ body {
 .user-profile-visible {
   display: flex !important;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.05);
-  padding: 8px 16px;
-  border-radius: 100px;
+  padding: 4px;
+  border-radius: 50%;
   border: 1px solid rgba(0, 243, 255, 0.3);
   backdrop-filter: blur(5px);
   cursor: pointer;
   transition: all 0.2s;
+  width: 44px;
+  height: 44px;
   pointer-events: auto !important;
 }
 
@@ -113,49 +162,57 @@ body {
 }
 
 .mini-login-btn {
-  background: transparent;
+  background: rgba(0, 243, 255, 0.05);
   color: #00f3ff;
   border: 2px solid #00f3ff;
-  padding: 8px 24px;
-  border-radius: 100px;
+  padding: 10px 30px;
+  border-radius: 4px;
   font-family: 'Orbitron';
   font-weight: 900;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
   pointer-events: auto !important;
 }
 
 .mini-login-btn:hover {
   background: #00f3ff;
   color: #000;
-  box-shadow: 0 0 20px #00f3ff;
+  box-shadow: 0 0 30px #00f3ff;
+  transform: translateY(-2px);
+}
+
+.mini-login-btn:active {
+  transform: scale(0.95);
 }
 
 .google-btn {
   width: 100%;
-  background: #fff;
-  color: #000;
-  border: none;
-  padding: 15px;
+  background: transparent;
+  color: #fff;
+  border: 2px solid #fff;
+  padding: 18px;
   border-radius: 8px;
   font-family: 'Orbitron';
   font-weight: 900;
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
   margin-bottom: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  transition: all 0.2s;
+  gap: 12px;
+  transition: all 0.3s;
   pointer-events: auto !important;
 }
 
 .google-btn:hover {
-  background: #00f3ff;
-  box-shadow: 0 0 20px #00f3ff;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 0 30px #fff;
 }
 
 .mini-btn {
@@ -790,3 +847,103 @@ input:checked + .slider:before { transform: translateX(30px); }
   font-family: 'Orbitron';
   text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
+
+.legal-links-small {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.legal-links-small a {
+  font-size: 10px;
+  color: #8899aa;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  pointer-events: auto !important;
+}
+
+.legal-links-small a:hover {
+
+  color: #00f3ff;
+
+}
+
+
+
+/* Bottom Ad Banner */
+
+.ad-banner-style {
+
+  position: absolute;
+
+  bottom: 0;
+
+  left: 0;
+
+  width: 100%;
+
+  height: 50px;
+
+  background: #000;
+
+  border-top: 1px solid rgba(0, 243, 255, 0.2);
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  z-index: 1000;
+
+  pointer-events: auto;
+
+}
+
+
+
+.ad-banner-content {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+}
+
+
+
+.ad-badge-tiny {
+
+  font-size: 8px;
+
+  border: 1px solid #445;
+
+  padding: 2px 4px;
+
+  color: #8899aa;
+
+  font-weight: 900;
+
+}
+
+
+
+.ad-banner-text {
+
+  font-size: 12px;
+
+  color: #8899aa;
+
+  letter-spacing: 1px;
+
+}
+
+
+
+
+
+

@@ -1,11 +1,12 @@
 import { Scene } from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS, EVENTS } from '../consts';
+import { GAME_WIDTH, GAME_HEIGHT, EVENTS } from '../consts';
 import { supabase } from '../supabase';
 import { Storage } from '../utils/Storage';
+import { AudioManager } from '../managers/AudioManager';
 
 export class UIScene extends Scene {
   private currentScore: number = 0;
-  private highScore: number = 0;
+  private audio!: AudioManager;
 
   // DOM Elements
   private scoreEl: HTMLElement | null = null;
@@ -28,9 +29,6 @@ export class UIScene extends Scene {
   private musicToggle: HTMLInputElement | null = null;
 
   // Supabase UI
-  private googleLoginBtn: HTMLElement | null = null;
-  private logoutBtn: HTMLElement | null = null;
-  private userProfile: HTMLElement | null = null;
   private userAvatar: HTMLImageElement | null = null;
   private userNickname: HTMLElement | null = null;
 
@@ -39,13 +37,14 @@ export class UIScene extends Scene {
   }
 
   init(data: { mode: string, initialScore?: number, highScore?: number }) {
-    console.log('UIScene Init, initialScore:', data.initialScore);
     this.currentScore = data.initialScore || 0; 
     this.cacheDOMElements();
+    this.audio = new AudioManager(this);
     
-    // Clean up any lingering elements from previous session
+    // 1. CLEAR ALL PENDING ANIMATIONS
     document.querySelectorAll('.floating-score').forEach(el => el.remove());
     
+    // 2. RESET DISPLAY
     if (this.scoreEl) this.scoreEl.innerText = this.currentScore.toString();
     if (this.bestEl && data.highScore !== undefined) this.bestEl.innerText = data.highScore.toString();
 
@@ -93,11 +92,8 @@ export class UIScene extends Scene {
   }
 
   create() {
-    console.log('UIScene Create');
     this.setupListeners();
     this.initSettings();
-    
-    // ENSURE HUD IS VISIBLE
     if (this.hudEl) {
       this.hudEl.classList.remove('hidden');
       this.hudEl.classList.add('visible');
@@ -123,60 +119,29 @@ export class UIScene extends Scene {
     this.infoCloseBtn = document.getElementById('info-close-btn');
     this.soundToggle = document.getElementById('sound-toggle') as HTMLInputElement;
     this.musicToggle = document.getElementById('music-toggle') as HTMLInputElement;
-
-    // Supabase
-    this.googleLoginBtn = document.getElementById('google-login-btn');
-    this.logoutBtn = document.getElementById('logout-btn');
-    this.userProfile = document.getElementById('user-profile');
     this.userAvatar = document.getElementById('user-avatar') as HTMLImageElement;
     this.userNickname = document.getElementById('user-nickname');
   }
 
   private async updateAuthUI() {
-      if (!supabase) {
-          this.googleLoginBtn?.classList.add('hidden');
-          return;
-      }
+      if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-          this.googleLoginBtn?.classList.add('hidden');
-          this.userProfile?.classList.remove('user-profile-hidden');
-          this.userProfile?.classList.add('user-profile-visible');
-          
-          // 1. Show cached name immediately
           const cachedName = localStorage.getItem('prism_nick_cache');
-          if (cachedName && this.userNickname) {
-              this.userNickname.innerText = cachedName;
-          }
-
-          // 2. Fetch the "Truth" from DB
-          const { data: profile } = await supabase
-              .from('profiles')
-              .select('nickname, avatar_url')
-              .eq('id', user.id)
-              .maybeSingle();
-
+          if (cachedName && this.userNickname) this.userNickname.innerText = cachedName;
+          const { data: profile } = await supabase.from('profiles').select('nickname, avatar_url').eq('id', user.id).maybeSingle();
           if (profile && profile.nickname) {
               localStorage.setItem('prism_nick_cache', profile.nickname);
               if (this.userNickname) this.userNickname.innerText = profile.nickname;
               if (this.userAvatar) this.userAvatar.src = profile.avatar_url || user.user_metadata.avatar_url || '';
-          } else if (this.userNickname) {
-              this.userNickname.innerText = user.user_metadata.full_name || 'Agent';
           }
-          
-          // Sync scores
           Storage.syncWithCloud();
-      } else {
-          this.googleLoginBtn?.classList.remove('hidden');
-          this.userProfile?.classList.add('user-profile-hidden');
-          this.userProfile?.classList.remove('user-profile-visible');
       }
   }
 
   private initSettings() {
     const soundOn = localStorage.getItem('prism-sound') !== 'false';
     const musicOn = localStorage.getItem('prism-music') !== 'false';
-
     if (this.soundToggle) this.soundToggle.checked = soundOn;
     if (this.musicToggle) this.musicToggle.checked = musicOn;
 
@@ -184,7 +149,7 @@ export class UIScene extends Scene {
       e.stopPropagation();
       this.settingsMenu?.classList.remove('hidden');
       this.settingsMenu?.classList.add('visible');
-      this.updateAuthUI();
+      if (this.exitToMenuBtn) this.exitToMenuBtn.style.display = 'block';
     });
 
     this.settingsCloseBtn?.addEventListener('click', (e) => {
@@ -201,47 +166,13 @@ export class UIScene extends Scene {
     this.soundToggle?.addEventListener('change', (e) => {
       const target = e.target as HTMLInputElement;
       localStorage.setItem('prism-sound', target.checked.toString());
-      this.sound.mute = !target.checked;
+      this.audio.refreshSettings();
     });
 
     this.musicToggle?.addEventListener('change', (e) => {
       const target = e.target as HTMLInputElement;
       localStorage.setItem('prism-music', target.checked.toString());
-    });
-
-    // Supabase Auth Actions
-    this.googleLoginBtn?.addEventListener('click', async () => {
-        if (!supabase) return;
-        
-        // Show loading state on button
-        const originalText = this.googleLoginBtn!.innerText;
-        this.googleLoginBtn!.innerText = 'Connecting...';
-        this.googleLoginBtn!.style.opacity = '0.5';
-
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { 
-                    redirectTo: `${window.location.origin}/`,
-                    queryParams: {
-                        access_type: 'offline',
-                        prompt: 'consent',
-                    }
-                }
-            });
-            if (error) throw error;
-        } catch (err) {
-            console.error('Login Error:', err);
-            this.googleLoginBtn!.innerText = originalText;
-            this.googleLoginBtn!.style.opacity = '1';
-            alert('Connection Failed. Check your network or Supabase config.');
-        }
-    });
-
-    this.logoutBtn?.addEventListener('click', async () => {
-        if (!supabase) return;
-        await supabase.auth.signOut();
-        this.updateAuthUI();
+      this.audio.refreshSettings();
     });
   }
 
@@ -262,12 +193,11 @@ export class UIScene extends Scene {
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             this.timerEl.innerText = `${mins}:${secs.toString().padStart(2, '0')}`;
-            if (seconds <= 10) this.timerEl.style.color = '#ff0055';
-            else this.timerEl.style.color = '#ffff00';
+            this.timerEl.style.color = seconds <= 10 ? '#ff0055' : '#ffff00';
         }
     });
 
-    gameScene.events.on(EVENTS.SCORE_UPDATED, (score: number, high: number) => {
+    gameScene.events.on(EVENTS.SCORE_UPDATED, (_score: number, high: number) => {
       if (this.bestEl) this.bestEl.innerText = high.toString();
     });
 
@@ -278,9 +208,8 @@ export class UIScene extends Scene {
     gameScene.events.on(EVENTS.GAME_OVER, async () => {
       if (this.hudEl) { this.hudEl.classList.remove('visible'); this.hudEl.classList.add('hidden'); }
       if (this.gameOverEl) { this.gameOverEl.classList.remove('hidden'); this.gameOverEl.classList.add('visible'); }
-      if (this.finalScoreEl) { this.finalScoreEl.innerText = this.currentScore.toString(); }
+      if (this.finalScoreEl) this.finalScoreEl.innerText = this.currentScore.toString();
       
-      // Add competitive prompt if not logged in
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
           const prompt = document.createElement('div');
@@ -289,7 +218,6 @@ export class UIScene extends Scene {
           prompt.style.fontSize = '14px';
           prompt.style.marginTop = '10px';
           prompt.style.fontFamily = 'Orbitron';
-          prompt.style.animation = 'flicker 2s infinite';
           this.gameOverEl?.insertBefore(prompt, this.restartBtn);
       }
 
@@ -303,22 +231,26 @@ export class UIScene extends Scene {
   }
 
   private animateScoreGained(amount: number, worldX: number, worldY: number) {
+    const activeInstance = this;
     const canvasBounds = this.scale.canvasBounds;
     const scaleX = canvasBounds.width / GAME_WIDTH;
     const scaleY = canvasBounds.height / GAME_HEIGHT;
     const startX = canvasBounds.x + (worldX * scaleX);
     const startY = canvasBounds.y + (worldY * scaleY);
+
     const scoreText = document.createElement('div');
     scoreText.innerText = `+${amount}`;
     scoreText.className = 'floating-score';
     document.body.appendChild(scoreText);
     scoreText.style.left = `${startX}px`;
     scoreText.style.top = `${startY}px`;
-    requestAnimationFrame(() => {
+
+    this.time.delayedCall(10, () => {
         scoreText.style.transform = 'translate(-50%, -50%) scale(1.5)';
         scoreText.style.opacity = '1';
-        setTimeout(() => {
-            const targetRect = this.scoreEl?.getBoundingClientRect();
+        
+        this.time.delayedCall(400, () => {
+            const targetRect = activeInstance.scoreEl?.getBoundingClientRect();
             if (targetRect) {
                 const targetX = targetRect.left + targetRect.width / 2;
                 const targetY = targetRect.top + targetRect.height / 2;
@@ -328,12 +260,13 @@ export class UIScene extends Scene {
                 scoreText.style.transform = 'translate(-50%, -50%) scale(0.5)';
                 scoreText.style.opacity = '0.2';
             }
-            setTimeout(() => {
+
+            this.time.delayedCall(600, () => {
                 scoreText.remove();
-                this.incrementScore(amount);
-                this.pulseScore();
-            }, 600);
-        }, 400);
+                activeInstance.incrementScore(amount);
+                activeInstance.pulseScore();
+            });
+        });
     });
   }
 
@@ -370,6 +303,7 @@ export class UIScene extends Scene {
   private handleExitToMenu() {
     if (this.settingsMenu) { this.settingsMenu.classList.remove('visible'); this.settingsMenu.classList.add('hidden'); }
     if (this.hudEl) { this.hudEl.classList.remove('visible'); this.hudEl.classList.add('hidden'); }
+    this.audio.stopAllMusic();
     const gameScene = this.scene.get('GameScene');
     gameScene.scene.stop();
     this.scene.stop();
@@ -382,7 +316,6 @@ export class UIScene extends Scene {
     if (this.scoreEl) this.scoreEl.innerText = '0';
     const gameScene = this.scene.get('GameScene');
     gameScene.events.emit(EVENTS.RESTART_GAME);
-    if (this.hudEl) { this.hudEl.classList.remove('hidden'); this.hudEl.classList.add('visible'); }
   }
 
   private showCombo(lines: number) {

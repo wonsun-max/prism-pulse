@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { GRID_SIZE, CELL_SIZE, CELL_PADDING, COLORS } from '../consts';
+import { GRID_SIZE, CELL_SIZE } from '../consts';
 
 export class Grid {
   private scene: Scene;
@@ -7,6 +7,7 @@ export class Grid {
   private container: Phaser.GameObjects.Container;
   private previewContainer: Phaser.GameObjects.Container;
   
+  // Bomb logic: Map 'row,col' string to { count: number, text: Phaser.GameObjects.Text }
   private bombs: Map<string, { count: number, text: Phaser.GameObjects.Text }> = new Map();
 
   constructor(scene: Scene, x: number, y: number) {
@@ -136,7 +137,7 @@ export class Grid {
       // 2. Countdown Number (on top)
       const text = this.scene.add.text(
           centerX, 
-          centerY + 5, // Slightly lower to center in the bomb body
+          centerY + 5, 
           count.toString(), 
           { 
               fontFamily: 'Orbitron',
@@ -152,9 +153,8 @@ export class Grid {
       this.container.add(text);
       this.bombs.set(key, { count, text });
       
-      // Store reference to emoji so we can destroy it later
-      // We'll attach it to the text object for easy cleanup
-      (text as any).emojiRef = emoji;
+      // @ts-ignore
+      text.emojiRef = emoji;
 
       if (this.grid[r][c]) {
           this.grid[r][c]!.setTint(0xff0000); 
@@ -180,7 +180,7 @@ export class Grid {
   
   public tickBombs(): boolean {
       let exploded = false;
-      this.bombs.forEach((bomb, key) => {
+      this.bombs.forEach((bomb) => {
           bomb.count--;
           bomb.text.setText(bomb.count.toString());
           if (bomb.count <= 0) exploded = true;
@@ -272,7 +272,8 @@ export class Grid {
       if (this.bombs.has(key)) {
           const bomb = this.bombs.get(key);
           if (bomb?.text) {
-              if ((bomb.text as any).emojiRef) (bomb.text as any).emojiRef.destroy();
+              // @ts-ignore
+              if (bomb.text.emojiRef) bomb.text.emojiRef.destroy();
               bomb.text.destroy();
           }
           this.bombs.delete(key);
@@ -284,16 +285,23 @@ export class Grid {
     cells.forEach(c => {
         const wx = this.container.x + c.x;
         const wy = this.container.y + c.y;
+        const color = c.tintTopLeft;
         
         const emitter = this.scene.add.particles(wx, wy, 'shard', {
-            speed: { min: 100, max: 200 },
-            scale: { start: 1, end: 0 },
+            speed: { min: 150, max: 300 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 1.2, end: 0 },
+            rotate: { min: 0, max: 360 },
+            alpha: { start: 1, end: 0 },
             blendMode: 'ADD',
-            lifespan: 600,
-            quantity: 8,
+            lifespan: 800,
+            quantity: 12,
+            tint: color,
             emitting: false
         });
-        emitter.explode(8);
+        emitter.explode(12);
+        
+        this.scene.time.delayedCall(1000, () => emitter.destroy());
     });
   }
 

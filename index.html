@@ -3,11 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Prism Pulse</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    
     <style>
       body {
         margin: 0;
@@ -33,6 +34,15 @@
     </style>
   </head>
   <body>
+    <!-- Initial Splash Loader (HTML/CSS only, visible before JS loads) -->
+    <div id="initial-loader">
+      <div class="loader-content">
+        <h1 class="loader-title">PRISM PULSE</h1>
+        <div class="loader-pulse"></div>
+        <p class="loader-status">INITIALIZING PULSE NETWORK...</p>
+      </div>
+    </div>
+
     <div id="app">
       <!-- Game Canvas will be injected here by Phaser -->
       
@@ -42,11 +52,13 @@
         <!-- Main Menu -->
         <div id="main-menu" class="visible">
           
-          <!-- Top Profile Bar -->
-          <div id="main-profile-bar" class="top-profile-bar">
+          <!-- Top Utility Bar -->
+          <div class="top-profile-bar">
+            <div id="main-settings-btn" class="settings-trigger" style="margin-right: 10px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
             <div id="main-user-info" class="user-profile-hidden">
               <img id="main-user-avatar" src="" alt="">
-              <span id="main-user-nickname">Agent</span>
             </div>
             <button id="main-login-btn" class="mini-login-btn">Login</button>
           </div>
@@ -107,14 +119,6 @@
           <div class="settings-card">
             <h2 class="settings-title">Settings</h2>
             
-            <!-- User Profile Section -->
-            <div id="user-profile" class="user-profile-hidden">
-              <img id="user-avatar" src="" alt="Avatar">
-              <span id="user-nickname">Guest</span>
-              <button id="logout-btn" class="mini-btn">Logout</button>
-            </div>
-            <button id="google-login-btn" class="google-btn">Login with Google</button>
-
             <div class="setting-item">
               <span class="setting-label">Sound FX</span>
               <label class="switch">
@@ -131,6 +135,21 @@
             </div>
             <button id="exit-to-menu-btn" class="secondary-btn">Exit to Menu</button>
             <button id="settings-close-btn" class="close-btn">Done</button>
+            
+            <!-- Legal Links -->
+            <div class="legal-links-small">
+              <a href="https://wonsun-max.github.io/prism-pulse/privacy.html" target="_blank">Privacy Policy</a>
+              <a href="https://wonsun-max.github.io/prism-pulse/terms.html" target="_blank">Terms of Service</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legal Agreement Overlay (First Launch) -->
+        <div id="legal-overlay" class="hidden">
+          <div class="menu-card tutorial-card">
+            <h2 class="info-title">Terms of Service</h2>
+            <p class="info-desc">By entering the Pulse Network, you agree to our <a href="https://wonsun-max.github.io/prism-pulse/privacy.html" target="_blank" style="color: #00f3ff;">Privacy Policy</a> and <a href="https://wonsun-max.github.io/prism-pulse/terms.html" target="_blank" style="color: #00f3ff;">Terms of Service</a>.</p>
+            <button id="legal-accept-btn" class="play-btn">Accept & Enter</button>
           </div>
         </div>
 
@@ -199,12 +218,33 @@
           </div>
         </div>
 
+        <!-- Login Prompt Overlay -->
+        <div id="login-prompt-overlay" class="hidden">
+          <div class="menu-card tutorial-card">
+            <div class="info-icon">🔒</div>
+            <h2 class="info-title">Access Denied</h2>
+            <p class="info-desc">The Hall of Fame is restricted to registered Agents. Log in now to view global rankings.</p>
+            <button id="prompt-login-btn" class="play-btn" style="width: 100%;">Login with Google</button>
+            <button id="prompt-close-btn" class="secondary-btn" style="width: 100%; border: none;">Not Now</button>
+          </div>
+        </div>
+
         <!-- Game Over -->
         <div id="game-over" class="hidden">
           <div class="game-over-title">Game Over</div>
           <div id="final-score-display" class="final-score">0</div>
           <button id="restart-btn" class="play-btn">Try Again</button>
         </div>
+
+        <!-- Ad Banner Placeholder -->
+        <div id="ad-banner-mock" class="ad-banner-style">
+          <div class="ad-banner-content">
+            <span class="ad-badge-tiny">Ad</span>
+            <span class="ad-banner-text">Pulse Network - Upgrade to Pro</span>
+          </div>
+        </div>
+
+      </div>
 
       </div>
     </div>

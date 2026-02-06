@@ -1,81 +1,97 @@
 # 💎 PRISM PULSE: NEON HORIZON
 
-> **"The Pulse is calling. Will you join the network?"**
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build: Phaser 3](https://img.shields.io/badge/Engine-Phaser%203-00f3ff.svg)](https://phaser.io/)
+[![Language: TypeScript](https://img.shields.io/badge/Language-TypeScript-bc13fe.svg)](https://www.typescriptlang.org/)
+[![Backend: Supabase](https://img.shields.io/badge/Backend-Supabase-3ecf8e.svg)](https://supabase.com/)
 
-Welcome to **Prism Pulse**, a high-octane, neon-drenched puzzle experience built with Phaser 3 and TypeScript. This isn't just another block game—it's a mission to build the ultimate competitive arcade ecosystem.
+> **"Enter the Grid. Defuse the Pulse. Conquer the Leaderboard."**
 
----
-
-## 🤝 Let's Build This Together!
-
-This is a **Big Project**, and we're looking for agents to help expand the Pulse Network. We believe the best games are built by communities. Whether you're a designer, a developer, or a high-score master, your input shapes the future of Prism Pulse.
-
-**How you can help:**
-- **Propose New Modes**: Got an idea for a "Zen" mode or a "Hardcore" 10x10 grid?
-- **Enhance the Juice**: Suggest new particle effects, screen shakes, or synthwave tracks.
-- **Battle the Bugs**: Found a glitch in the Pulse? Report it and let's squash it.
-- **Global Scaling**: Help us optimize the Supabase integration for millions of players.
+**Prism Pulse** is a high-performance, professional-grade arcade puzzle game designed for the modern mobile era. Built with a "Neon Horizon" aesthetic, it combines addictive block-matching mechanics with a globally connected social ecosystem.
 
 ---
 
-## 🔥 Current Mission Specs
+## 🤝 The Pulse Mission (Join Us!)
 
-- **3 Dynamic Game Modes**:
-  - 🧩 **Classic**: Pure strategy. Infinite play.
-  - ⚡ **Blitz Rush**: 2-minute high-speed scoring.
-  - 💣 **Bomb Defusal**: Tactical survival. Defuse before it blows!
-- **Neon Horizon Aesthetic**: A fully procedural cyberpunk theme with glowing glass blocks and animated synthwave grids.
-- **The Pulse Network (Global Leaderboards)**: Real-time, platform-separated ranking (iOS/Android) powered by Supabase.
-- **Smart Spawning Algorithm**: The game intelligently helps you survive by spawning smaller pieces when the grid is critical.
-- **Seamless Persistence**: Auto-save after every move. Your progress is safe even if you refresh.
+This project is a **Collaborative Ecosystem**. We are building the Pulse Network together. Whether you are a designer, a coder, or a strategist, your contributions shape the future of this neon universe.
 
----
-
-## 🛠 Tech Stack
-
-- **Engine**: [Phaser 3](https://phaser.io/) (Game Logic & Rendering)
-- **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict & Robust)
-- **Backend**: [Supabase](https://supabase.com/) (PostgreSQL + Auth + Realtime)
-- **Styling**: Pure CSS3 (Holographic Glassmorphism)
-- **Build Tool**: [Vite](https://vitejs.dev/)
+### **How to Contribute:**
+- **Feature Proposals**: Suggest new experimental game modes.
+- **UI/UX Refinement**: Help us polish the glassmorphic interface.
+- **Backend Scaling**: Optimize our Supabase integration for a global player base.
+- **Bug Hunting**: Report glitches in the matrix via GitHub Issues.
 
 ---
 
-## 🚀 Getting Started
+## 🔥 Mission Specs
 
-1. **Clone the Sector**:
-   ```bash
-   git clone https://github.com/wonsun-max/prism-pulse.git
-   ```
-2. **Initialize Systems**:
-   ```bash
-   npm install
-   ```
-3. **Connect to the Network**:
-   Create a `.env` file with your Supabase credentials:
-   ```env
-   VITE_SUPABASE_URL=your_url
-   VITE_SUPABASE_ANON_KEY=your_key
-   ```
-4. **Boot the Pulse**:
-   ```bash
-   npm run dev
-   ```
+### **3 Dynamic Game Modes**
+- 🧩 **Classic**: Pure strategy. Infinite play. The ultimate neural workout.
+- ⚡ **Blitz Rush**: 120 seconds of high-speed intensity. Every move counts.
+- 💣 **Bomb Defusal**: Tactical survival. Clear lines to defuse incoming threats before they explode.
+
+### **The Pulse Network**
+- **Global Leaderboards**: Real-time ranking powered by Supabase.
+- **Platform Separation**: Dedicated competitive buckets for iOS and Android.
+- **Agent Profiles**: Personalized identities with live cross-platform stat tracking.
+
+### **Modern Architecture**
+- **Neon Horizon Aesthetic**: Fully procedural neon textures, animated backgrounds, and CRT scanline overlays.
+- **Smart Difficulty**: An intelligent spawning algorithm that adapts to your board state.
+- **Persistence**: Hybrid local/cloud saving—your progress is safe anywhere, anytime.
+- **Monetized**: Integrated Google AdMob framework for professional mobile distribution.
 
 ---
 
-## 🗺 Roadmap (Future Features)
+## 🚀 Deployment Instructions
 
-- [ ] **Agent Leveling (XP System)**: Earn experience for every line cleared.
-- [ ] **Custom Themes**: Unlock "Vaporwave" or "Midnight Gold" skins.
-- [ ] **PvP Duels**: Real-time 1v1 block battles.
-- [ ] **Achievements**: Collect badges for massive combos.
+### **1. Local Development**
+```bash
+# Clone the sector
+git clone https://github.com/wonsun-max/prism-pulse.git
+
+# Initialize systems
+npm install
+
+# Start the local link
+npm run dev
+```
+
+### **2. Connecting to the Pulse**
+Create a `.env` file in the root directory:
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_ADMOB_APP_ID=ca-app-pub-4817475918283790~8916632999
+VITE_ADMOB_BANNER_ID=ca-app-pub-4817475918283790/1695882439
+```
+
+### **3. Mobile Build (Android Studio)**
+```bash
+# Build the production assets
+npm run build
+
+# Sync with Capacitor
+npx cap sync
+
+# Open the Android Terminal
+npx cap open android
+```
 
 ---
 
-## 📜 Legal
+## 🗺 Roadmap (Future Protocols)
+- [ ] **XP Protocol**: Level up your Agent by clearing lines.
+- [ ] **Neural Skins**: Unlock custom visual themes.
+- [ ] **PvP Duels**: Real-time competitive block matches.
+- [ ] **Achievements**: Earn badges for legendary combos.
 
-By playing or contributing, you agree to the [Pulse Network Privacy Policy](https://wonsun-max.github.io/prism-pulse/privacy.html) and [Terms of Service](https://wonsun-max.github.io/prism-pulse/terms.html).
+---
 
-**Created by [Wonsun Max](https://github.com/wonsun-max)**
-*Join the Pulse. Shape the Future.*
+## 📜 License
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Developed by [Wonsun Max](https://github.com/wonsun-max)**  
+*Built for the Pulse Network. Verified for the Future.*
