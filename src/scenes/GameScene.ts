@@ -47,11 +47,11 @@ export class GameScene extends Scene {
     this.cameras.main.setBackgroundColor(COLORS.BACKGROUND);
     this.highScore = Storage.getHighScore(this.currentMode);
 
-    // Initialize Grid
-    this.grid = new Grid(this, (GAME_WIDTH - (8 * CELL_SIZE)) / 2, 200);
+    // Initialize Grid - Moved down to 280 to leave room for HUD
+    this.grid = new Grid(this, (GAME_WIDTH - (8 * CELL_SIZE)) / 2, 280);
 
-    // Tray background
-    const tray = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 250, GAME_WIDTH - 40, 200, 0x151525, 0.5);
+    // Tray background - Moved down to leave gap from grid
+    const tray = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 200, GAME_WIDTH - 40, 200, 0x151525, 0.5);
     tray.setStrokeStyle(2, 0x00f3ff, 0.3);
 
     // RESTORE SESSION
@@ -116,7 +116,7 @@ export class GameScene extends Scene {
   }
 
   private restoreBlocks(savedBlocks: { matrix: number[][], color: number }[]) {
-      const blockAreaY = GAME_HEIGHT - 250;
+      const blockAreaY = GAME_HEIGHT - 200;
       const spacing = GAME_WIDTH / 4;
       savedBlocks.forEach((b, i) => {
           const block = new Block(this, spacing * (i + 1), blockAreaY, b.matrix, b.color);
@@ -129,7 +129,7 @@ export class GameScene extends Scene {
 
   private spawnBlocks() {
     if (this.blocks.length > 0) return;
-    const blockAreaY = GAME_HEIGHT - 250;
+    const blockAreaY = GAME_HEIGHT - 200;
     const spacing = GAME_WIDTH / 4;
     const availableColors = [
         COLORS.PRISM_RED, COLORS.PRISM_ORANGE, COLORS.PRISM_YELLOW, 

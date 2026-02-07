@@ -9,7 +9,7 @@ export class AdManager {
    */
   static async initialize(): Promise<void> {
     if (this.isInitialized) return;
-    
+
     try {
       // @ts-ignore - Only run if Capacitor is present
       if (!!window.Capacitor) {
@@ -30,7 +30,7 @@ export class AdManager {
     if (!this.isInitialized) await this.initialize();
 
     const adId = import.meta.env.VITE_ADMOB_BANNER_ID;
-    
+
     // Check environment
     // @ts-ignore
     const isNative = !!window.Capacitor;
@@ -51,7 +51,7 @@ export class AdManager {
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
-        isTesting: false // FINAL PROD SETTING
+        isTesting: false // SWITCHED TO LIVE ADS
       });
     } catch (e) {
       console.error('[AdMob] Native Banner error, using fallback', e);
