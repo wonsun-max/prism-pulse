@@ -1,12 +1,13 @@
 import { Scene } from 'phaser';
-import { GRID_SIZE, CELL_SIZE } from '../consts';
+import { GRID_SIZE, CELL_SIZE, ANIM, THEMES } from '../consts';
+import { Storage } from '../utils/Storage';
 
 export class Grid {
   private scene: Scene;
   private grid: (Phaser.GameObjects.Image | null)[][];
   private container: Phaser.GameObjects.Container;
   private previewContainer: Phaser.GameObjects.Container;
-  
+
   // Bomb logic: Map 'row,col' string to { count: number, text: Phaser.GameObjects.Text }
   private bombs: Map<string, { count: number, text: Phaser.GameObjects.Text }> = new Map();
 
@@ -19,6 +20,9 @@ export class Grid {
   }
 
   private drawBackground() {
+    const themeId = Storage.getCurrentThemeId();
+    const currentTheme = THEMES[themeId] || THEMES.classic;
+
     for (let row = 0; row < GRID_SIZE; row++) {
       for (let col = 0; col < GRID_SIZE; col++) {
         const cell = this.scene.add.image(
@@ -26,6 +30,7 @@ export class Grid {
           row * CELL_SIZE + CELL_SIZE / 2,
           'grid_cell'
         );
+        cell.setTint(currentTheme.colors.gridCell);
         this.container.add(cell);
       }
     }
@@ -87,7 +92,7 @@ export class Grid {
               'block_cell'
             );
             ghost.setTint(color);
-            ghost.setAlpha(0.2); 
+            ghost.setAlpha(0.2);
             ghost.setBlendMode(Phaser.BlendModes.ADD);
             this.previewContainer.add(ghost);
           }
@@ -114,78 +119,78 @@ export class Grid {
             'block_cell'
           );
           cell.setTint(color);
-          cell.setBlendMode(Phaser.BlendModes.ADD); 
+          cell.setBlendMode(Phaser.BlendModes.ADD);
           this.container.add(cell);
           this.grid[targetRow][targetCol] = cell;
         }
       }
     }
   }
-  
+
   public addBomb(r: number, c: number, count: number): void {
-      const key = `${r},${c}`;
-      if (this.bombs.has(key)) return;
+    const key = `${r},${c}`;
+    if (this.bombs.has(key)) return;
 
-      const centerX = c * CELL_SIZE + CELL_SIZE / 2;
-      const centerY = r * CELL_SIZE + CELL_SIZE / 2;
+    const centerX = c * CELL_SIZE + CELL_SIZE / 2;
+    const centerY = r * CELL_SIZE + CELL_SIZE / 2;
 
-      // 1. Bomb Emoji Background
-      const emoji = this.scene.add.text(centerX, centerY, '💣', {
-          fontSize: '54px'
-      }).setOrigin(0.5).setAlpha(0.7);
+    // 1. Bomb Emoji Background
+    const emoji = this.scene.add.text(centerX, centerY, '💣', {
+      fontSize: '54px'
+    }).setOrigin(0.5).setAlpha(0.7);
 
-      // 2. Countdown Number (on top)
-      const text = this.scene.add.text(
-          centerX, 
-          centerY + 5, 
-          count.toString(), 
-          { 
-              fontFamily: 'Orbitron',
-              fontSize: '28px', 
-              color: '#fff', 
-              fontStyle: 'bold', 
-              stroke: '#000', 
-              strokeThickness: 6 
-          }
-      ).setOrigin(0.5);
-      
-      this.container.add(emoji);
-      this.container.add(text);
-      this.bombs.set(key, { count, text });
-      
-      // @ts-ignore
-      text.emojiRef = emoji;
-
-      if (this.grid[r][c]) {
-          this.grid[r][c]!.setTint(0xff0000); 
+    // 2. Countdown Number (on top)
+    const text = this.scene.add.text(
+      centerX,
+      centerY + 5,
+      count.toString(),
+      {
+        fontFamily: 'Orbitron',
+        fontSize: '28px',
+        color: '#fff',
+        fontStyle: 'bold',
+        stroke: '#000',
+        strokeThickness: 6
       }
+    ).setOrigin(0.5);
+
+    this.container.add(emoji);
+    this.container.add(text);
+    this.bombs.set(key, { count, text });
+
+    // @ts-ignore
+    text.emojiRef = emoji;
+
+    if (this.grid[r][c]) {
+      this.grid[r][c]!.setTint(0xff0000);
+    }
   }
 
   public addBombToRandomCell(): boolean {
-      const occupiedCells: {r: number, c: number}[] = [];
-      for (let r=0; r<GRID_SIZE; r++) {
-          for (let c=0; c<GRID_SIZE; c++) {
-              if (this.grid[r][c] !== null && !this.bombs.has(`${r},${c}`)) {
-                  occupiedCells.push({r, c});
-              }
-          }
+    const occupiedCells: { r: number, c: number }[] = [];
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (this.grid[r][c] !== null && !this.bombs.has(`${r},${c}`)) {
+          occupiedCells.push({ r, c });
+        }
       }
-      
-      if (occupiedCells.length === 0) return false;
-      
-      const target = occupiedCells[Phaser.Math.Between(0, occupiedCells.length - 1)];
-      this.addBomb(target.r, target.c, 9);
-      return true;
+    }
+
+    if (occupiedCells.length === 0) return false;
+
+    const target = occupiedCells[Phaser.Math.Between(0, occupiedCells.length - 1)];
+    this.addBomb(target.r, target.c, 9);
+    return true;
   }
-  
+
   public tickBombs(): boolean {
-      let exploded = false;
-      this.bombs.forEach((bomb) => {
-          bomb.count--;
-          bomb.text.setText(bomb.count.toString());
-          if (bomb.count <= 0) exploded = true;
-      });
-      return exploded;
+    let exploded = false;
+    this.bombs.forEach((bomb) => {
+      bomb.count--;
+      bomb.text.setText(bomb.count.toString());
+      if (bomb.count <= 0) exploded = true;
+    });
+    return exploded;
   }
 
   public checkLines(): { rows: number[], cols: number[] } {
@@ -210,7 +215,7 @@ export class Grid {
     return { rows: rowsToClear, cols: colsToClear };
   }
 
-  public async clearLines(rows: number[], cols: number[]): Promise<{x: number, y: number} | null> {
+  public async clearLines(rows: number[], cols: number[]): Promise<{ x: number, y: number } | null> {
     const cellsToRemove: Phaser.GameObjects.Image[] = [];
     let avgX = 0;
     let avgY = 0;
@@ -230,8 +235,8 @@ export class Grid {
 
     if (uniqueCells.length > 0) {
       uniqueCells.forEach(c => {
-          avgX += this.container.x + c.x;
-          avgY += this.container.y + c.y;
+        avgX += this.container.x + c.x;
+        avgY += this.container.y + c.y;
       });
       avgX /= uniqueCells.length;
       avgY /= uniqueCells.length;
@@ -241,8 +246,8 @@ export class Grid {
         scaleX: 1.5,
         scaleY: 1.5,
         alpha: 0,
-        duration: 250,
-        ease: 'Cubic.easeOut',
+        duration: ANIM.CLEAR_DURATION,
+        ease: ANIM.CLEAR_EASE,
         onComplete: () => {
           uniqueCells.forEach(cell => cell.destroy());
         }
@@ -250,105 +255,105 @@ export class Grid {
 
       rows.forEach(r => {
         for (let c = 0; c < GRID_SIZE; c++) {
-            this.grid[r][c] = null;
-            this.removeBomb(r, c);
+          this.grid[r][c] = null;
+          this.removeBomb(r, c);
         }
       });
       cols.forEach(c => {
         for (let r = 0; r < GRID_SIZE; r++) {
-            this.grid[r][c] = null;
-            this.removeBomb(r, c);
+          this.grid[r][c] = null;
+          this.removeBomb(r, c);
         }
       });
-      
+
       this.createExplosion(uniqueCells);
       return { x: avgX, y: avgY };
     }
     return null;
   }
-  
+
   private removeBomb(r: number, c: number) {
-      const key = `${r},${c}`;
-      if (this.bombs.has(key)) {
-          const bomb = this.bombs.get(key);
-          if (bomb?.text) {
-              // @ts-ignore
-              if (bomb.text.emojiRef) bomb.text.emojiRef.destroy();
-              bomb.text.destroy();
-          }
-          this.bombs.delete(key);
+    const key = `${r},${c}`;
+    if (this.bombs.has(key)) {
+      const bomb = this.bombs.get(key);
+      if (bomb?.text) {
+        // @ts-ignore
+        if (bomb.text.emojiRef) bomb.text.emojiRef.destroy();
+        bomb.text.destroy();
       }
+      this.bombs.delete(key);
+    }
   }
 
   private createExplosion(cells: Phaser.GameObjects.Image[]) {
     if (cells.length === 0) return;
     cells.forEach(c => {
-        const wx = this.container.x + c.x;
-        const wy = this.container.y + c.y;
-        const color = c.tintTopLeft;
-        
-        const emitter = this.scene.add.particles(wx, wy, 'shard', {
-            speed: { min: 150, max: 300 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 1.2, end: 0 },
-            rotate: { min: 0, max: 360 },
-            alpha: { start: 1, end: 0 },
-            blendMode: 'ADD',
-            lifespan: 800,
-            quantity: 12,
-            tint: color,
-            emitting: false
-        });
-        emitter.explode(12);
-        
-        this.scene.time.delayedCall(1000, () => emitter.destroy());
+      const wx = this.container.x + c.x;
+      const wy = this.container.y + c.y;
+      const color = c.tintTopLeft;
+
+      const emitter = this.scene.add.particles(wx, wy, 'shard', {
+        speed: { min: 200, max: 450 },
+        angle: { min: 0, max: 360 },
+        scale: { start: 1.5, end: 0 },
+        rotate: { min: 0, max: 360 },
+        alpha: { start: 1, end: 0 },
+        blendMode: 'ADD',
+        lifespan: 500,
+        quantity: 16,
+        tint: color,
+        emitting: false
+      });
+      emitter.explode(12);
+
+      this.scene.time.delayedCall(1000, () => emitter.destroy());
     });
   }
 
   public isEmpty(): boolean {
-      return this.grid.every(row => row.every(cell => cell === null));
+    return this.grid.every(row => row.every(cell => cell === null));
   }
 
   public getFillRate(): number {
-      let filled = 0;
-      for (let r = 0; r < GRID_SIZE; r++) {
-          for (let c = 0; c < GRID_SIZE; c++) {
-              if (this.grid[r][c] !== null) filled++;
-          }
+    let filled = 0;
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        if (this.grid[r][c] !== null) filled++;
       }
-      return filled / (GRID_SIZE * GRID_SIZE);
+    }
+    return filled / (GRID_SIZE * GRID_SIZE);
   }
 
   // Save/Load helpers
   public serialize(): (number | null)[][] {
-      return this.grid.map(row => row.map(cell => cell ? cell.tintTopLeft : null));
+    return this.grid.map(row => row.map(cell => cell ? cell.tintTopLeft : null));
   }
 
   public deserialize(data: (number | null)[][]) {
-      for (let r = 0; r < GRID_SIZE; r++) {
-          for (let c = 0; c < GRID_SIZE; c++) {
-              const tint = data[r][c];
-              if (tint !== null) {
-                  const cell = this.scene.add.image(
-                    c * CELL_SIZE + CELL_SIZE / 2,
-                    r * CELL_SIZE + CELL_SIZE / 2,
-                    'block_cell'
-                  );
-                  cell.setTint(tint);
-                  cell.setBlendMode(Phaser.BlendModes.ADD);
-                  this.container.add(cell);
-                  this.grid[r][c] = cell;
-              }
-          }
+    for (let r = 0; r < GRID_SIZE; r++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        const tint = data[r][c];
+        if (tint !== null) {
+          const cell = this.scene.add.image(
+            c * CELL_SIZE + CELL_SIZE / 2,
+            r * CELL_SIZE + CELL_SIZE / 2,
+            'block_cell'
+          );
+          cell.setTint(tint);
+          cell.setBlendMode(Phaser.BlendModes.ADD);
+          this.container.add(cell);
+          this.grid[r][c] = cell;
+        }
       }
+    }
   }
 
   public serializeBombs(): { r: number, c: number, count: number }[] {
-      const b: { r: number, c: number, count: number }[] = [];
-      this.bombs.forEach((val, key) => {
-          const [r, c] = key.split(',').map(Number);
-          b.push({ r, c, count: val.count });
-      });
-      return b;
+    const b: { r: number, c: number, count: number }[] = [];
+    this.bombs.forEach((val, key) => {
+      const [r, c] = key.split(',').map(Number);
+      b.push({ r, c, count: val.count });
+    });
+    return b;
   }
 }

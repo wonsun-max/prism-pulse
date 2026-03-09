@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import { Grid } from '../objects/Grid';
 import { Block, SHAPES } from '../objects/Block';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS, EVENTS, CELL_SIZE, GAME_MODES } from '../consts';
+import { GAME_WIDTH, GAME_HEIGHT, CELL_SIZE, ANIM, THEMES, EVENTS, GAME_MODES } from '../consts';
 import { Storage, GameSession } from '../utils/Storage';
 import { AudioManager } from '../managers/AudioManager';
 
@@ -11,9 +11,9 @@ export class GameScene extends Scene {
   private score: number = 0;
   private highScore: number = 0;
   private audio!: AudioManager;
-  
+
   private currentMode: string = GAME_MODES.CLASSIC;
-  
+
   // Blitz Mode State
   private blitzTimeLeft: number = 0;
   private blitzTimerEvent: Phaser.Time.TimerEvent | null = null;
@@ -31,10 +31,10 @@ export class GameScene extends Scene {
     this.score = 0;
     this.movesCount = 0;
     this.blocks = [];
-    
+
     if (this.blitzTimerEvent) {
-        this.blitzTimerEvent.remove();
-        this.blitzTimerEvent = null;
+      this.blitzTimerEvent.remove();
+      this.blitzTimerEvent = null;
     }
   }
 
@@ -43,99 +43,100 @@ export class GameScene extends Scene {
     this.audio = new AudioManager(this);
     this.audio.stopMusic('menu_music');
     this.audio.playMusic('game_music', 0.5);
-    
-    this.cameras.main.setBackgroundColor(COLORS.BACKGROUND);
+
+    const themeId = Storage.getCurrentThemeId();
+    const currentTheme = THEMES[themeId] || THEMES.classic;
+
+    this.cameras.main.setBackgroundColor(currentTheme.colors.background);
     this.highScore = Storage.getHighScore(this.currentMode);
 
     // Initialize Grid - Moved down to 280 to leave room for HUD
     this.grid = new Grid(this, (GAME_WIDTH - (8 * CELL_SIZE)) / 2, 280);
 
     // Tray background - Moved down to leave gap from grid
-    const tray = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 200, GAME_WIDTH - 40, 200, 0x151525, 0.5);
-    tray.setStrokeStyle(2, 0x00f3ff, 0.3);
+    const tray = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 200, GAME_WIDTH - 40, 200, currentTheme.colors.gridBg, 0.5);
+    tray.setStrokeStyle(2, currentTheme.colors.primary, 0.3);
 
     // RESTORE SESSION
     const saved = Storage.getSession(this.currentMode);
     if (saved) {
-        console.log('[GameScene] Restoring session, score:', saved.score);
-        this.score = saved.score;
-        this.movesCount = saved.movesCount;
-        this.grid.deserialize(saved.grid);
-        if (this.currentMode === GAME_MODES.BOMB && saved.bombs) {
-            saved.bombs.forEach(b => this.grid.addBomb(b.r, b.c, b.count));
-        }
-        if (this.currentMode === GAME_MODES.BLITZ && saved.timeLeft !== undefined) {
-            this.blitzTimeLeft = saved.timeLeft;
-        } else {
-            this.blitzTimeLeft = 120;
-        }
-        this.restoreBlocks(saved.blocks);
-    } else {
-        this.spawnBlocks();
+      console.log('[GameScene] Restoring session, score:', saved.score);
+      this.score = saved.score;
+      this.movesCount = saved.movesCount;
+      this.grid.deserialize(saved.grid);
+      if (this.currentMode === GAME_MODES.BOMB && saved.bombs) {
+        saved.bombs.forEach(b => this.grid.addBomb(b.r, b.c, b.count));
+      }
+      if (this.currentMode === GAME_MODES.BLITZ && saved.timeLeft !== undefined) {
+        this.blitzTimeLeft = saved.timeLeft;
+      } else {
         this.blitzTimeLeft = 120;
+      }
+      this.restoreBlocks(saved.blocks);
+    } else {
+      this.spawnBlocks();
+      this.blitzTimeLeft = 120;
     }
 
     // UI Overlay - Pass initial score and high score
     if (this.scene.isActive('UIScene')) {
-        this.scene.stop('UIScene');
+      this.scene.stop('UIScene');
     }
-    this.scene.launch('UIScene', { 
-        mode: this.currentMode, 
-        initialScore: this.score,
-        highScore: this.highScore 
+    this.scene.launch('UIScene', {
+      mode: this.currentMode,
+      initialScore: this.score,
+      highScore: this.highScore
     });
-    
+
     this.updateScore(0); // Sync initial score display and high score
 
     // Mode Specific Setup
     if (this.currentMode === GAME_MODES.BLITZ) {
-        this.blitzTimerEvent = this.time.addEvent({
-            delay: 1000,
-            callback: this.updateBlitzTimer,
-            callbackScope: this,
-            loop: true
-        });
-        this.events.emit(EVENTS.TIMER_UPDATED, this.blitzTimeLeft);
+      this.blitzTimerEvent = this.time.addEvent({
+        delay: 1000,
+        callback: this.updateBlitzTimer,
+        callbackScope: this,
+        loop: true
+      });
+      this.events.emit(EVENTS.TIMER_UPDATED, this.blitzTimeLeft);
     }
-    
+
     this.events.off(EVENTS.RESTART_GAME);
     this.events.once(EVENTS.RESTART_GAME, () => {
-        Storage.saveSession(this.currentMode, null); // Clear save on manual restart
-        this.scene.restart({ mode: this.currentMode });
+      Storage.saveSession(this.currentMode, null); // Clear save on manual restart
+      this.scene.restart({ mode: this.currentMode });
     });
   }
 
   private updateBlitzTimer() {
-      this.blitzTimeLeft--;
-      this.events.emit(EVENTS.TIMER_UPDATED, this.blitzTimeLeft);
-      if (this.blitzTimeLeft % 5 === 0) this.saveCurrentProgress();
-      if (this.blitzTimeLeft <= 0) {
-          if (this.blitzTimerEvent) this.blitzTimerEvent.remove();
-          this.gameOver();
-      }
+    this.blitzTimeLeft--;
+    this.events.emit(EVENTS.TIMER_UPDATED, this.blitzTimeLeft);
+    if (this.blitzTimeLeft % 5 === 0) this.saveCurrentProgress();
+    if (this.blitzTimeLeft <= 0) {
+      if (this.blitzTimerEvent) this.blitzTimerEvent.remove();
+      this.gameOver();
+    }
   }
 
   private restoreBlocks(savedBlocks: { matrix: number[][], color: number }[]) {
-      const blockAreaY = GAME_HEIGHT - 200;
-      const spacing = GAME_WIDTH / 4;
-      savedBlocks.forEach((b, i) => {
-          const block = new Block(this, spacing * (i + 1), blockAreaY, b.matrix, b.color);
-          block.setInitialScale(0.4); // Reduced scale to prevent overlap
-          block.on('dragging', (bl: Block) => this.handleBlockDragging(bl));
-          block.on('dropped', (bl: Block) => this.handleBlockDrop(bl));
-          this.blocks.push(block);
-      });
+    const blockAreaY = GAME_HEIGHT - 200;
+    const spacing = GAME_WIDTH / 4;
+    savedBlocks.forEach((b, i) => {
+      const block = new Block(this, spacing * (i + 1), blockAreaY, b.matrix, b.color);
+      block.setInitialScale(0.4); // Reduced scale to prevent overlap
+      block.on('dragging', (bl: Block) => this.handleBlockDragging(bl));
+      block.on('dropped', (bl: Block) => this.handleBlockDrop(bl));
+      this.blocks.push(block);
+    });
   }
 
   private spawnBlocks() {
     if (this.blocks.length > 0) return;
     const blockAreaY = GAME_HEIGHT - 200;
     const spacing = GAME_WIDTH / 4;
-    const availableColors = [
-        COLORS.PRISM_RED, COLORS.PRISM_ORANGE, COLORS.PRISM_YELLOW, 
-        COLORS.PRISM_GREEN, COLORS.PRISM_BLUE, COLORS.PRISM_PINK,
-        COLORS.ACCENT_CYAN, COLORS.ACCENT_PURPLE
-    ];
+    const themeId = Storage.getCurrentThemeId();
+    const currentTheme = THEMES[themeId] || THEMES.classic;
+    const availableColors = currentTheme.colors.blocks;
     const fillRate = this.grid.getFillRate();
     const smallShapes = [7, 8, 9];
     const mediumShapes = [0, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13];
@@ -144,23 +145,23 @@ export class GameScene extends Scene {
     for (let i = 0; i < 3; i++) {
       let shapeIdx = 0;
       if (fillRate > 0.6) {
-          if (i === 0 && fillRate > 0.7) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
-          else {
-              const roll = Math.random();
-              if (roll < 0.5) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
-              else if (roll < 0.9) shapeIdx = mediumShapes[Phaser.Math.Between(0, mediumShapes.length - 1)];
-              else shapeIdx = largeShapes[Phaser.Math.Between(0, largeShapes.length - 1)];
-          }
+        if (i === 0 && fillRate > 0.7) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
+        else {
+          const roll = Math.random();
+          if (roll < 0.5) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
+          else if (roll < 0.9) shapeIdx = mediumShapes[Phaser.Math.Between(0, mediumShapes.length - 1)];
+          else shapeIdx = largeShapes[Phaser.Math.Between(0, largeShapes.length - 1)];
+        }
       } else if (fillRate > 0.3) {
-          const roll = Math.random();
-          if (roll < 0.3) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
-          else if (roll < 0.8) shapeIdx = mediumShapes[Phaser.Math.Between(0, mediumShapes.length - 1)];
-          else shapeIdx = largeShapes[Phaser.Math.Between(0, largeShapes.length - 1)];
+        const roll = Math.random();
+        if (roll < 0.3) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
+        else if (roll < 0.8) shapeIdx = mediumShapes[Phaser.Math.Between(0, mediumShapes.length - 1)];
+        else shapeIdx = largeShapes[Phaser.Math.Between(0, largeShapes.length - 1)];
       } else {
-          const roll = Math.random();
-          if (roll < 0.1) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
-          else if (roll < 0.6) shapeIdx = mediumShapes[Phaser.Math.Between(0, mediumShapes.length - 1)];
-          else shapeIdx = largeShapes[Phaser.Math.Between(0, largeShapes.length - 1)];
+        const roll = Math.random();
+        if (roll < 0.1) shapeIdx = smallShapes[Phaser.Math.Between(0, smallShapes.length - 1)];
+        else if (roll < 0.6) shapeIdx = mediumShapes[Phaser.Math.Between(0, mediumShapes.length - 1)];
+        else shapeIdx = largeShapes[Phaser.Math.Between(0, largeShapes.length - 1)];
       }
       const color = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
       const block = new Block(this, spacing * (i + 1), blockAreaY, SHAPES[shapeIdx], color as number);
@@ -168,24 +169,30 @@ export class GameScene extends Scene {
       block.on('dragging', (b: Block) => this.handleBlockDragging(b));
       block.on('dropped', (b: Block) => this.handleBlockDrop(b));
       this.blocks.push(block);
-      
+
       block.setScale(0);
-      this.tweens.add({ targets: block, scale: 0.4, duration: 300, delay: i * 100, ease: 'Back.out' });
+      this.tweens.add({
+        targets: block,
+        scale: 0.4,
+        duration: ANIM.SPAWN_DURATION,
+        delay: i * 60,
+        ease: ANIM.SPAWN_EASE
+      });
     }
     this.saveCurrentProgress();
     this.checkGameOver();
   }
 
   private saveCurrentProgress() {
-      const session: GameSession = {
-          score: this.score,
-          grid: this.grid.serialize(),
-          blocks: this.blocks.map(b => ({ matrix: b.matrix, color: b.color })),
-          movesCount: this.movesCount,
-          timeLeft: this.currentMode === GAME_MODES.BLITZ ? this.blitzTimeLeft : undefined,
-          bombs: this.currentMode === GAME_MODES.BOMB ? this.grid.serializeBombs() : undefined
-      };
-      Storage.saveSession(this.currentMode, session);
+    const session: GameSession = {
+      score: this.score,
+      grid: this.grid.serialize(),
+      blocks: this.blocks.map(b => ({ matrix: b.matrix, color: b.color })),
+      movesCount: this.movesCount,
+      timeLeft: this.currentMode === GAME_MODES.BLITZ ? this.blitzTimeLeft : undefined,
+      bombs: this.currentMode === GAME_MODES.BOMB ? this.grid.serializeBombs() : undefined
+    };
+    Storage.saveSession(this.currentMode, session);
   }
 
   private handleBlockDragging(block: Block) {
@@ -219,10 +226,10 @@ export class GameScene extends Scene {
         const dropY = block.y;
         this.grid.placeBlock(block.matrix, gridRow, gridCol, block.color);
         this.audio.playPlace();
-        
+
         // --- JUICE: IMPACT ---
-        this.cameras.main.shake(150, 0.008);
-        
+        this.cameras.main.shake(ANIM.SHAKE_DURATION, ANIM.SHAKE_INTENSITY);
+
         this.blocks = this.blocks.filter(b => b !== block);
         block.destroy();
         this.onBlockPlaced(blockSize, dropX, dropY);
@@ -240,60 +247,67 @@ export class GameScene extends Scene {
     if (totalLines > 0) {
       this.audio.playClear();
       if (totalLines > 1) this.audio.playCombo(totalLines);
-      
+
       // --- JUICE: CLEAR SHAKE ---
-      this.cameras.main.shake(300, 0.02);
-      
+      this.cameras.main.shake(ANIM.SHAKE_DURATION * 2, ANIM.SHAKE_INTENSITY * 1.5);
+
       const clearPos = await this.grid.clearLines(lines.rows, lines.cols);
       const bonusPoints = (totalLines * 100) * totalLines;
       let totalGained = placementPoints + bonusPoints;
-      
+
       // --- PERFECT CLEAR BONUS ---
       if (this.grid.isEmpty()) {
-          totalGained += 1000;
-          this.events.emit(EVENTS.SCORE_GAINED, { 
-              amount: 1000, 
-              x: GAME_WIDTH / 2, 
-              y: GAME_HEIGHT / 2,
-              isPerfect: true 
-          });
+        totalGained += 1000;
+        this.events.emit(EVENTS.SCORE_GAINED, {
+          amount: 1000,
+          x: GAME_WIDTH / 2,
+          y: GAME_HEIGHT / 2,
+          isPerfect: true
+        });
       }
 
       this.updateScore(totalGained);
       this.events.emit(EVENTS.LINES_CLEARED, totalLines);
       if (clearPos) this.events.emit(EVENTS.SCORE_GAINED, { amount: totalGained, x: clearPos.x, y: clearPos.y });
     } else {
-        this.updateScore(placementPoints);
-        this.events.emit(EVENTS.SCORE_GAINED, { amount: placementPoints, x: x, y: y });
-        if (this.currentMode === GAME_MODES.BOMB) this.handleBombMechanic();
+      this.updateScore(placementPoints);
+      this.events.emit(EVENTS.SCORE_GAINED, { amount: placementPoints, x: x, y: y });
+      if (this.currentMode === GAME_MODES.BOMB) this.handleBombMechanic();
     }
     if (this.currentMode === GAME_MODES.BOMB) {
-       const exploded = this.grid.tickBombs();
-       if (exploded) {
-           this.gameOver();
-           return;
-       }
+      const exploded = this.grid.tickBombs();
+      if (exploded) {
+        this.gameOver();
+        return;
+      }
     }
     if (this.blocks.length === 0) {
       this.spawnBlocks();
     } else {
-        this.saveCurrentProgress();
-        this.checkGameOver();
+      this.saveCurrentProgress();
+      this.checkGameOver();
     }
   }
 
   private handleBombMechanic() {
-      if (this.movesCount % 5 === 0) {
-          const added = this.grid.addBombToRandomCell();
-          if (added) {
-             this.events.emit(EVENTS.BOMB_SPAWNED);
-             // --- JUICE: BOMB WARNING ---
-             this.cameras.main.flash(200, 255, 0, 0, true);
-          }
+    if (this.movesCount % 5 === 0) {
+      const added = this.grid.addBombToRandomCell();
+      if (added) {
+        this.events.emit(EVENTS.BOMB_SPAWNED);
+        // --- JUICE: BOMB WARNING ---
+        this.cameras.main.flash(200, 255, 0, 0, true);
       }
+    }
   }
 
   private updateScore(points: number) {
+    if (points > 0) {
+      const pointsToAward = Math.floor(points / 100);
+      if (pointsToAward > 0) {
+        Storage.addPoints(pointsToAward);
+      }
+    }
+
     this.score += points;
     if (this.score > this.highScore) {
       this.highScore = this.score;
@@ -303,36 +317,35 @@ export class GameScene extends Scene {
   }
 
   private checkGameOver() {
-      let canPlaceAny = false;
-      for (const block of this.blocks) {
-          for (let r = 0; r < 8; r++) {
-              for (let c = 0; c < 8; c++) {
-                  if (this.grid.canPlace(block.matrix, r, c)) {
-                      canPlaceAny = true;
-                      break;
-                  }
-              }
-              if (canPlaceAny) break;
+    let canPlaceAny = false;
+    for (const block of this.blocks) {
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          if (this.grid.canPlace(block.matrix, r, c)) {
+            canPlaceAny = true;
+            break;
           }
-          if (canPlaceAny) break;
+        }
+        if (canPlaceAny) break;
       }
-      if (!canPlaceAny && this.blocks.length > 0) this.gameOver();
-  }
-
-    private async gameOver() {
-
-        Storage.saveSession(this.currentMode, null);
-
-        this.audio.playGameOver();
-
-        if (this.blitzTimerEvent) this.blitzTimerEvent.remove();
-
-  
-
-        this.events.emit(EVENTS.GAME_OVER);
-
+      if (canPlaceAny) break;
     }
+    if (!canPlaceAny && this.blocks.length > 0) this.gameOver();
+  }
+
+  private async gameOver() {
+
+    Storage.saveSession(this.currentMode, null);
+
+    this.audio.playGameOver();
+
+    if (this.blitzTimerEvent) this.blitzTimerEvent.remove();
+
+
+
+    this.events.emit(EVENTS.GAME_OVER);
 
   }
 
-  
+}
+

@@ -1135,3 +1135,120 @@ input:checked+.slider:before {
     padding: 30px;
   }
 }
+
+/* --- Skins & Shop UI --- */
+.points-display-shop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #00f3ff;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+}
+
+.skins-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+.skin-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.skin-item.selected {
+  background: rgba(0, 243, 255, 0.1);
+  border-color: #00f3ff;
+}
+
+.skin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skin-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.skin-colors {
+  display: flex;
+  gap: 4px;
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.skin-item button {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  min-width: 90px;
+}
+
+.buy-skin-btn.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #333;
+}
+
+.status-tag.active {
+  color: #00f3ff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.currency-icon-small {
+  font-size: 0.8rem;
+}
+
+.hud-points {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #00f3ff;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #8899aa;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  color: #00f3ff;
+  transform: rotate(30deg);
+}
+
+#leaderboard-overlay.visible,
+#skins-overlay.visible {
+  display: flex !important;
+}

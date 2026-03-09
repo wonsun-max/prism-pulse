@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../consts';
+import { GAME_WIDTH, GAME_HEIGHT, THEMES } from '../consts';
+import { Storage } from '../utils/Storage';
 import { AudioManager } from '../managers/AudioManager';
 import { supabase } from '../supabase';
 import { AdManager } from '../managers/AdManager';
@@ -46,6 +47,12 @@ export class LauncherScene extends Scene {
     private promptLoginBtn: HTMLElement | null = null;
     private promptCloseBtn: HTMLElement | null = null;
 
+    // Skins DOM
+    private skinsOverlay: HTMLElement | null = null;
+    private skinsList: HTMLElement | null = null;
+    private skinsCloseBtn: HTMLElement | null = null;
+    private shopPointsTotal: HTMLElement | null = null;
+
     constructor() {
         super('LauncherScene');
     }
@@ -54,8 +61,10 @@ export class LauncherScene extends Scene {
         this.audio = new AudioManager(this);
         this.audio.playMusic('menu_music', 0.4);
 
-        this.cameras.main.setBackgroundColor(COLORS.BACKGROUND);
-        this.createBackground();
+        const themeId = Storage.getCurrentThemeId();
+        const theme = THEMES[themeId] || THEMES.classic;
+        this.cameras.main.setBackgroundColor(theme.colors.background);
+        this.createBackground(theme);
 
         // --- AD BANNER ---
         AdManager.showBanner();
@@ -106,6 +115,13 @@ export class LauncherScene extends Scene {
         this.promptLoginBtn = document.getElementById('prompt-login-btn');
         this.promptCloseBtn = document.getElementById('prompt-close-btn');
 
+        // Skins cache
+        this.skinsOverlay = document.getElementById('skins-overlay');
+        this.skinsList = document.getElementById('skins-list');
+        this.skinsCloseBtn = document.getElementById('skins-close-btn');
+        this.shopPointsTotal = document.getElementById('shop-points-total');
+        const skinsBtn = document.getElementById('skins-btn');
+
         // Reset UI state
         mainMenu?.classList.remove('hidden');
         mainMenu?.classList.add('visible');
@@ -116,6 +132,7 @@ export class LauncherScene extends Scene {
         this.profileOverlay?.classList.add('hidden');
         this.legalOverlay?.classList.add('hidden');
         this.loginPromptOverlay?.classList.add('hidden');
+        this.skinsOverlay?.classList.add('hidden');
 
         this.checkLegalAgreement();
         this.updateMainAuthUI();
@@ -153,6 +170,13 @@ export class LauncherScene extends Scene {
                     this.loginPromptOverlay?.classList.add('visible');
                     menuCardMain?.classList.add('hidden');
                 }
+            };
+        }
+
+        if (skinsBtn) {
+            skinsBtn.onclick = () => {
+                this.audio.playClick();
+                this.showSkinsShop();
             };
         }
 
@@ -277,6 +301,15 @@ export class LauncherScene extends Scene {
                 this.audio.playClick();
                 this.leaderboardOverlay?.classList.add('hidden');
                 this.leaderboardOverlay?.classList.remove('visible');
+                menuCardMain?.classList.remove('hidden');
+            };
+        }
+
+        if (this.skinsCloseBtn) {
+            this.skinsCloseBtn.onclick = () => {
+                this.audio.playClick();
+                this.skinsOverlay?.classList.add('hidden');
+                this.skinsOverlay?.classList.remove('visible');
                 menuCardMain?.classList.remove('hidden');
             };
         }
@@ -479,14 +512,92 @@ export class LauncherScene extends Scene {
         });
     }
 
-    private createBackground() {
+    private showSkinsShop() {
+        const menuCardMain = document.getElementById('menu-card-main');
+        menuCardMain?.classList.add('hidden');
+
+        this.skinsOverlay?.classList.remove('hidden');
+        this.skinsOverlay?.classList.add('visible');
+        this.renderSkinsList();
+    }
+
+    private renderSkinsList() {
+        if (!this.skinsList || !this.shopPointsTotal) return;
+
+        const points = Storage.getPoints();
+        this.shopPointsTotal.innerText = points.toString();
+        this.skinsList.innerHTML = '';
+
+        const unlocked = Storage.getUnlockedThemes();
+        const currentId = Storage.getCurrentThemeId();
+
+        Object.entries(THEMES).forEach(([id, theme]) => {
+            const isUnlocked = unlocked.includes(id);
+            const isSelected = currentId === id;
+            const canAfford = points >= theme.cost;
+
+            const item = document.createElement('div');
+            item.className = `skin-item ${isSelected ? 'selected' : ''}`;
+
+            // Create preview color dots
+            const colorPreview = Object.values(theme.colors)
+                .slice(0, 3)
+                .map(c => `<div class="color-dot" style="background:${typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : c}"></div>`)
+                .join('');
+
+            item.innerHTML = `
+                <div class="skin-info">
+                    <div class="skin-name">${theme.name}</div>
+                    <div class="skin-colors">${colorPreview}</div>
+                </div>
+                <div class="skin-action">
+                    ${isSelected ? '<span class="status-tag active">Equipped</span>' :
+                    isUnlocked ? `<button class="select-skin-btn" data-id="${id}">Select</button>` :
+                        `<button class="buy-skin-btn ${canAfford ? '' : 'locked'}" data-id="${id}">
+                        ${theme.cost} <span class="currency-icon-small">💎</span>
+                       </button>`
+                }
+                </div>
+            `;
+            this.skinsList?.appendChild(item);
+        });
+
+        // Add event listeners
+        this.skinsList.querySelectorAll('.select-skin-btn').forEach(btn => {
+            (btn as HTMLElement).onclick = () => {
+                const id = (btn as HTMLElement).dataset.id;
+                if (id) {
+                    Storage.setTheme(id);
+                    this.renderSkinsList();
+                    this.audio.playClick();
+                }
+            };
+        });
+
+        this.skinsList.querySelectorAll('.buy-skin-btn').forEach(btn => {
+            (btn as HTMLElement).onclick = () => {
+                const id = (btn as HTMLElement).dataset.id;
+                if (id && !btn.classList.contains('locked')) {
+                    const theme = THEMES[id as keyof typeof THEMES];
+                    if (Storage.getPoints() >= theme.cost) {
+                        Storage.addPoints(-theme.cost);
+                        Storage.unlockTheme(id);
+                        this.renderSkinsList();
+                        this.audio.playClick();
+                    }
+                }
+            };
+        });
+    }
+
+    private createBackground(theme: any) {
         for (let i = 0; i < 15; i++) {
             const x = Phaser.Math.Between(0, GAME_WIDTH);
             const y = Phaser.Math.Between(0, GAME_HEIGHT);
             const shard = this.add.image(x, y, 'shard')
                 .setAlpha(Phaser.Math.FloatBetween(0.1, 0.4))
                 .setScale(Phaser.Math.FloatBetween(1, 3))
-                .setTint(i % 2 === 0 ? COLORS.ACCENT_CYAN : COLORS.ACCENT_PURPLE)
+                .setTint(i % 2 === 0 ? theme.colors.blocks[0] : theme.colors.blocks[1])
                 .setBlendMode(Phaser.BlendModes.ADD);
             this.tweens.add({
                 targets: shard,

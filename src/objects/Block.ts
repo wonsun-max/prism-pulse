@@ -1,5 +1,5 @@
 import { Scene } from 'phaser';
-import { CELL_SIZE } from '../consts';
+import { CELL_SIZE, ANIM } from '../consts';
 
 export const SHAPES = [
   // --- Tetris Classics ---
@@ -43,7 +43,7 @@ export class Block extends Phaser.GameObjects.Container {
 
     this.constructVisuals();
     this.enableInput();
-    
+
     scene.add.existing(this);
   }
 
@@ -90,7 +90,7 @@ export class Block extends Phaser.GameObjects.Container {
         }
       }
     }
-    
+
     // Set size for hit area - larger than visual if it's scaled down
     this.setSize(width, height);
   }
@@ -102,10 +102,11 @@ export class Block extends Phaser.GameObjects.Container {
     this.on('dragstart', () => {
       // Scale up to full size for the grid
       this.scene.tweens.add({
-          targets: this,
-          scale: 1.0,
-          alpha: 0.8,
-          duration: 100
+        targets: this,
+        scale: ANIM.DRAG_SCALE,
+        alpha: 0.9,
+        duration: ANIM.DRAG_SCALE_DURATION,
+        ease: 'Cubic.out'
       });
       // Bring to top
       this.depth = 100;
@@ -114,7 +115,7 @@ export class Block extends Phaser.GameObjects.Container {
     this.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
       this.x = dragX;
       // Offset Y slightly while dragging so finger doesn't obscure block
-      this.y = dragY - 100; 
+      this.y = dragY - 100;
       this.emit('dragging', this);
     });
 
@@ -131,8 +132,8 @@ export class Block extends Phaser.GameObjects.Container {
       y: this.originalY,
       scale: this.initialTrayScale,
       alpha: 1,
-      duration: 200,
-      ease: 'Back.out'
+      duration: ANIM.DROP_RETURN_DURATION,
+      ease: 'Cubic.out'
     });
   }
 }
